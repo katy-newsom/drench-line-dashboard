@@ -66,7 +66,8 @@ async function getNextEpisode() {
     for (const page of response.results) {
       const releaseDate = extractDate(page.properties['Release Date'])
       if (releaseDate && new Date(releaseDate) > now) {
-        return { title: extractTitle(page), releaseDate }
+        const notes = page.properties['Notes']?.rich_text?.[0]?.plain_text ?? ''
+        return { id: page.id, title: extractTitle(page), releaseDate, notes }
       }
     }
     return null
