@@ -72,7 +72,7 @@ function NextEpisodeCard({ nextEpisode }) {
       {/* Expanded prep notes */}
       {open && (
         <div className="px-5 pb-5 space-y-3 border-t border-gray-200 pt-4">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Prep Notes</p>
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Game Plan 🎯</p>
           <textarea
             value={note}
             onChange={e => { setNote(e.target.value); setSaved(false) }}
