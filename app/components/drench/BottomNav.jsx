@@ -33,11 +33,11 @@ const TABS = [
     ),
   },
   {
-    href: '/guests',
-    label: 'Guests',
+    href: '/submissions',
+    label: 'Q&A',
     icon: (active) => (
       <svg className="w-5 h-5" fill="none" stroke={active ? '#CC0000' : 'currentColor'} strokeWidth="2" viewBox="0 0 24 24">
-        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     ),
   },
@@ -59,7 +59,7 @@ export default function BottomNav() {
 
   // Don't render for non-drench routes
   if (!pathname.startsWith('/dashboard') && !pathname.startsWith('/episodes') &&
-      !pathname.startsWith('/ideas') && !pathname.startsWith('/guests') && !pathname.startsWith('/social')) {
+      !pathname.startsWith('/ideas') && !pathname.startsWith('/submissions') && !pathname.startsWith('/social')) {
     return null
   }
 

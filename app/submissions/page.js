@@ -1,0 +1,6 @@
+export const dynamic = 'force-dynamic'
+import SubmissionsClient from './SubmissionsClient'
+
+export default function SubmissionsPage() {
+  return <SubmissionsClient />
+}
