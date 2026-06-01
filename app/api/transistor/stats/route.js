@@ -11,54 +11,50 @@ async function transistorFetch(path) {
   return res.json()
 }
 
+// Transistor requires dd-mm-yyyy
+function fmtDate(d) {
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  return `${dd}-${mm}-${d.getFullYear()}`
+}
+
 export async function GET() {
   if (!process.env.TRANSISTOR_API_KEY || !process.env.TRANSISTOR_SHOW_ID) {
     return NextResponse.json({ error: 'Transistor credentials not configured' }, { status: 503 })
   }
 
   try {
-    const showId = process.env.TRANSISTOR_SHOW_ID
+    // Find the show by slug
+    const showsData = await transistorFetch('/shows')
+    const slug = process.env.TRANSISTOR_SHOW_ID
+    const show = (showsData?.data ?? []).find(
+      s => s.attributes?.slug === slug || String(s.id) === slug
+    )
+    if (!show) throw new Error(`Show "${slug}" not found in Transistor`)
+    const showId = show.id
 
-    const [analyticsData, episodesData] = await Promise.all([
-      transistorFetch(`/analytics/${showId}`),
-      transistorFetch(`/episodes?show_id=${showId}&pagination[per]=50&pagination[page]=1`),
-    ])
-
-    const allTime = analyticsData?.data?.attributes?.downloads?.overall ?? 0
-
-    // This week: last 7 days
     const now = new Date()
     const weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000)
-    const weekStart = weekAgo.toISOString().split('T')[0]
-    const weekEnd = now.toISOString().split('T')[0]
+    const launchDate = new Date('2026-04-01') // show launched April 2026
 
-    let thisWeek = 0
-    try {
-      const weekData = await transistorFetch(`/analytics/${showId}?start_date=${weekStart}&end_date=${weekEnd}`)
-      thisWeek = weekData?.data?.attributes?.downloads?.overall ?? 0
-    } catch {
-      // non-fatal
-    }
+    // Pull this week + all-time analytics + episodes list in parallel
+    const [weekData, allTimeData, episodesData] = await Promise.all([
+      transistorFetch(`/analytics/${showId}?start_date=${fmtDate(weekAgo)}&end_date=${fmtDate(now)}`),
+      transistorFetch(`/analytics/${showId}?start_date=${fmtDate(launchDate)}&end_date=${fmtDate(now)}`),
+      transistorFetch(`/episodes?show_id=${showId}&status=published&pagination[per]=100`),
+    ])
 
-    // Best episode by downloads
+    const thisWeek = (weekData?.data?.attributes?.downloads ?? [])
+      .reduce((sum, d) => sum + (d.downloads ?? 0), 0)
+
+    const allTime = (allTimeData?.data?.attributes?.downloads ?? [])
+      .reduce((sum, d) => sum + (d.downloads ?? 0), 0)
+
+    // Episodes list doesn't include download counts — show the latest episode title
     const episodes = episodesData?.data ?? []
-    let bestEpisode = null
-    let bestCount = 0
+    const bestEpisode = episodes[0]?.attributes?.title ?? null
 
-    for (const ep of episodes) {
-      const downloads = ep.attributes?.downloads_count ?? 0
-      if (downloads > bestCount) {
-        bestCount = downloads
-        bestEpisode = ep.attributes?.title ?? 'Unknown'
-      }
-    }
-
-    return NextResponse.json({
-      allTime,
-      thisWeek,
-      bestEpisode,
-      bestEpisodeDownloads: bestCount,
-    })
+    return NextResponse.json({ allTime, thisWeek, bestEpisode, bestEpisodeDownloads: 0 })
   } catch (err) {
     console.error('GET /api/transistor/stats', err)
     return NextResponse.json({ error: err.message }, { status: 500 })
