@@ -57,8 +57,13 @@ function NextEpisodeCard({ nextEpisode }) {
             {formatDate(nextEpisode.releaseDate)}
           </p>
           <p className="font-bold text-lg leading-snug">{nextEpisode.title}</p>
-          {!open && nextEpisode.notes && (
-            <p className="text-xs text-gray-500 mt-1.5 line-clamp-1">{nextEpisode.notes}</p>
+          {!open && (
+            <p className="text-xs text-gray-400 mt-1.5">
+              {nextEpisode.notes
+                ? <span className="line-clamp-1">{nextEpisode.notes}</span>
+                : <span className="italic">✏️ Tap to add your game plan notes</span>
+              }
+            </p>
           )}
         </div>
         <svg

@@ -32,18 +32,26 @@ export async function GET() {
       page_size: 100,
     })
 
-    const submissions = response.results.map(page => ({
-      id: page.id,
-      subId: getNumber(page, 'Sub ID'),
-      question: getTitle(page),
-      status: getSelect(page, 'Status'),
-      category: getSelect(page, 'Category'),
-      source: getSelect(page, 'Source'),
-      submitterName: getRichText(page, 'Submitter Name'),
-      dateReceived: getDate(page, 'Date Received'),
-      notes: getRichText(page, 'Notes'),
-      episodeUsed: getRelation(page, 'Episode Used'),
-    }))
+    const submissions = response.results.map(page => {
+      const rawNotes = getRichText(page, 'Notes')
+      const EP_SEP = '\n——ep:'
+      const epIdx = rawNotes.indexOf(EP_SEP)
+      const notes = epIdx >= 0 ? rawNotes.slice(0, epIdx).trim() : rawNotes
+      const episodeRef = epIdx >= 0 ? rawNotes.slice(epIdx + EP_SEP.length).trim() : ''
+      return {
+        id: page.id,
+        subId: getNumber(page, 'Sub ID'),
+        question: getTitle(page),
+        status: getSelect(page, 'Status'),
+        category: getSelect(page, 'Category'),
+        source: getSelect(page, 'Source'),
+        submitterName: getRichText(page, 'Submitter Name'),
+        dateReceived: getDate(page, 'Date Received'),
+        notes,
+        episodeRef,
+        episodeUsed: getRelation(page, 'Episode Used'),
+      }
+    })
 
     return NextResponse.json({ submissions })
   } catch (err) {
@@ -94,13 +102,17 @@ export async function PATCH(req) {
   }
   try {
     const body = await req.json()
-    const { id, status, category, notes, episodeId } = body
+    const { id, status, category, notes, episodeId, episodeRef } = body
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
     const properties = {}
     if (status) properties['Status'] = { select: { name: status } }
     if (category) properties['Category'] = { select: { name: category } }
-    if (notes != null) properties['Notes'] = { rich_text: [{ text: { content: notes } }] }
+    if (notes != null || episodeRef != null) {
+      const baseNotes = notes ?? ''
+      const refSuffix = episodeRef ? `\n——ep:${episodeRef}` : ''
+      properties['Notes'] = { rich_text: [{ text: { content: baseNotes + refSuffix } }] }
+    }
     if (episodeId) properties['Episode Used'] = { relation: [{ id: episodeId }] }
 
     await notion.pages.update({ page_id: id, properties })
