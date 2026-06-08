@@ -385,8 +385,8 @@ export default function SubmissionsClient() {
   const [loadingSheets, setLoadingSheets] = useState(true)
   const [error, setError] = useState(null)
   const [showAdd, setShowAdd] = useState(false)
-  const [activeFilter, setActiveFilter] = useState('New')
-  const [activeTab, setActiveTab] = useState('notion')
+  const [activeFilter, setActiveFilter] = useState('All')
+  const [activeTab, setActiveTab] = useState('sheets')
 
   const loadNotion = useCallback(async () => {
     setLoadingNotion(true)

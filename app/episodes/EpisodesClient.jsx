@@ -35,10 +35,6 @@ function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-function daysUntil(dateStr) {
-  if (!dateStr) return null
-  return Math.ceil((new Date(dateStr) - new Date()) / (1000 * 60 * 60 * 24))
-}
 
 function EpisodeEditSheet({ episode, onClose, onSave }) {
   const [title, setTitle] = useState(episode.title)
@@ -191,7 +187,6 @@ function NewEpisodeModal({ onClose, onCreated }) {
 }
 
 function EpisodeRow({ ep, onTap }) {
-  const days = daysUntil(ep.releaseDate)
   const statusStyle = STATUS_COLORS[ep.status] ?? 'bg-gray-200 text-gray-700'
 
   return (
@@ -214,15 +209,7 @@ function EpisodeRow({ ep, onTap }) {
             <span className="text-xs text-gray-400">🎙️ Record {formatDate(ep.recordingDate)}</span>
           )}
           {ep.releaseDate && (
-            <span className="text-xs text-gray-400">
-              📅 Release {formatDate(ep.releaseDate)}
-              {days != null && days > 0 && days <= 30 && (
-                <span className="ml-1 text-dl-red font-bold">{days}d away</span>
-              )}
-              {days != null && days <= 0 && (
-                <span className="ml-1 text-green-600 font-bold">Today!</span>
-              )}
-            </span>
+            <span className="text-xs text-gray-400">📅 Release {formatDate(ep.releaseDate)}</span>
           )}
         </div>
       </div>

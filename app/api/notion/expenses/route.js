@@ -1,6 +1,50 @@
 import { NextResponse } from 'next/server'
 import { notion, DB } from '@/lib/notion-drench'
 
+function getTitle(page) {
+  const prop = Object.values(page.properties).find(p => p.type === 'title')
+  return prop?.title?.[0]?.plain_text ?? ''
+}
+function getRichText(page, name) {
+  return page.properties[name]?.rich_text?.map(t => t.plain_text).join('') ?? ''
+}
+function getNumber(page, name) {
+  return page.properties[name]?.number ?? null
+}
+function getSelect(page, name) {
+  return page.properties[name]?.select?.name ?? null
+}
+function getDate(page, name) {
+  return page.properties[name]?.date?.start ?? null
+}
+
+export async function GET() {
+  if (!DB.EXPENSES) {
+    return NextResponse.json({ error: 'NOTION_EXPENSES_DB_ID not configured' }, { status: 503 })
+  }
+  try {
+    const response = await notion.databases.query({
+      database_id: DB.EXPENSES,
+      sorts: [{ property: 'Date', direction: 'descending' }],
+      page_size: 100,
+    })
+
+    const expenses = response.results.map(page => ({
+      id: page.id,
+      description: getTitle(page),
+      amount: getNumber(page, 'Amount'),
+      category: getSelect(page, 'Category'),
+      date: getDate(page, 'Date'),
+      submittedBy: getRichText(page, 'Submitted By'),
+    }))
+
+    return NextResponse.json({ expenses })
+  } catch (err) {
+    console.error('GET /api/notion/expenses', err)
+    return NextResponse.json({ error: err.message }, { status: 500 })
+  }
+}
+
 export async function POST(req) {
   try {
     const body = await req.json()
