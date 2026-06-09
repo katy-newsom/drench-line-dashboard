@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server'
-import { notion, DB, extractTitle, extractSelect, extractText } from '@/lib/notion-drench'
+import { notion, DB, extractSelect, extractText } from '@/lib/notion-drench'
+
+function getTitle(page) {
+  // Notion title field is named "Topic Name" in this database
+  const prop = page.properties['Topic Name']
+  return prop?.title?.[0]?.plain_text ?? ''
+}
 
 export async function GET() {
   try {
@@ -10,10 +16,10 @@ export async function GET() {
 
     const ideas = response.results.map(page => ({
       id: page.id,
-      title: extractTitle(page),
+      title: getTitle(page),
       status: extractSelect(page.properties['Status']),
       notes: extractText(page.properties['Notes']),
-      submittedBy: extractText(page.properties['Submitted By']),
+      submittedBy: extractSelect(page.properties['Select']), // "Select" is the team member picker
     }))
 
     return NextResponse.json({ ideas })
@@ -31,10 +37,10 @@ export async function POST(req) {
     const page = await notion.pages.create({
       parent: { database_id: DB.TOPICS },
       properties: {
-        Title: { title: [{ text: { content: title || 'Untitled Idea' } }] },
+        'Topic Name': { title: [{ text: { content: title || 'Untitled Idea' } }] },
         Status: { select: { name: 'Idea' } },
         ...(notes && { Notes: { rich_text: [{ text: { content: notes } }] } }),
-        ...(submittedBy && { 'Submitted By': { rich_text: [{ text: { content: submittedBy } }] } }),
+        ...(submittedBy && { Select: { select: { name: submittedBy } } }),
       },
     })
 
@@ -53,7 +59,7 @@ export async function PATCH(req) {
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
     const properties = {}
-    if (title != null) properties['Title'] = { title: [{ text: { content: title } }] }
+    if (title != null) properties['Topic Name'] = { title: [{ text: { content: title } }] }
     if (status != null) properties['Status'] = { select: { name: status } }
     if (notes != null) properties['Notes'] = { rich_text: [{ text: { content: notes } }] }
 

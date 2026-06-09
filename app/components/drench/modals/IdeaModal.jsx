@@ -2,9 +2,16 @@
 import { useState } from 'react'
 import VoiceMemo from '../VoiceMemo'
 
+// Must match the select options in the Notion "Topics & Ideas" DB exactly
+const TEAM_MEMBERS = ['Jurahee Silvers', 'Sam Silvers', 'Conner Newsom', 'Jenny Bett Newsom', 'Logan Newsom']
+
 export default function IdeaModal({ user, onClose }) {
   const [title, setTitle] = useState('')
   const [notes, setNotes] = useState('')
+  // Pre-select the logged-in user if their name matches a Notion option
+  const [submittedBy, setSubmittedBy] = useState(
+    TEAM_MEMBERS.find(m => m.toLowerCase().includes((user ?? '').toLowerCase().split(' ')[0])) ?? ''
+  )
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState(null)
@@ -18,7 +25,7 @@ export default function IdeaModal({ user, onClose }) {
       const res = await fetch('/api/notion/ideas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: title.trim(), notes: notes.trim(), submittedBy: user }),
+        body: JSON.stringify({ title: title.trim(), notes: notes.trim(), submittedBy: submittedBy || null }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to submit')
@@ -61,7 +68,17 @@ export default function IdeaModal({ user, onClose }) {
             placeholder="Any details..."
           />
         </div>
-        <div className="text-xs text-gray-500">Submitting as: <strong>{user || 'Unknown'}</strong></div>
+        <div>
+          <label className="block text-sm font-bold mb-1">Submitting as</label>
+          <select
+            value={submittedBy}
+            onChange={e => setSubmittedBy(e.target.value)}
+            className="w-full border-2 border-black rounded-lg px-3 py-2 text-base focus:outline-none focus:border-dl-red bg-white"
+          >
+            <option value="">— Select your name</option>
+            {TEAM_MEMBERS.map(m => <option key={m} value={m}>{m}</option>)}
+          </select>
+        </div>
         {error && (
           <div className="text-sm text-dl-red font-medium bg-red-50 border border-dl-red rounded-lg px-3 py-2">
             {error}
