@@ -24,11 +24,11 @@ const TABS = [
     ),
   },
   {
-    href: '/ideas',
-    label: 'Ideas',
+    href: '/leads',
+    label: 'Sponsors',
     icon: (active) => (
       <svg className="w-5 h-5" fill="none" stroke={active ? '#CC0000' : 'currentColor'} strokeWidth="2" viewBox="0 0 24 24">
-        <path d="M9 18h6M10 22h4M12 2a7 7 0 015.29 11.58A4 4 0 0116 17H8a4 4 0 01-1.29-3.42A7 7 0 0112 2z" strokeLinecap="round" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
     ),
   },
@@ -58,7 +58,7 @@ export default function BottomNav() {
 
   // Don't render for non-drench routes
   if (!pathname.startsWith('/dashboard') && !pathname.startsWith('/episodes') &&
-      !pathname.startsWith('/ideas') && !pathname.startsWith('/submissions') && !pathname.startsWith('/expenses')) {
+      !pathname.startsWith('/leads') && !pathname.startsWith('/submissions') && !pathname.startsWith('/expenses')) {
     return null
   }
 
