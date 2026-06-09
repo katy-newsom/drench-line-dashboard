@@ -3,7 +3,7 @@ import { useState } from 'react'
 import VoiceMemo from '../VoiceMemo'
 
 // Must match the select options in the Notion "Topics & Ideas" DB exactly
-const TEAM_MEMBERS = ['Jurahee Silvers', 'Sam Silvers', 'Conner Newsom', 'Jenny Bett Newsom', 'Logan Newsom']
+const TEAM_MEMBERS = ['Jurahee Silvers', 'Sam Silvers', 'Conner Newsom', 'Jenny Bett Newsom', 'Katy Newsom', 'Logan Newsom']
 
 export default function IdeaModal({ user, onClose }) {
   const [title, setTitle] = useState('')
