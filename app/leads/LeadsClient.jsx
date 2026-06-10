@@ -6,28 +6,30 @@ const STATUSES = ['Lead', 'Contacted', 'In Talks', 'Closed Won', 'Closed Lost']
 const TIERS = ['BASE', 'CORE', 'LEAD', 'In-Kind', 'Custom']
 
 const TIER_DETAILS = {
-  BASE:     { price: '$500/mo', color: 'bg-blue-100 text-blue-800',   min: '3-month min' },
-  CORE:     { price: '$800/mo', color: 'bg-purple-100 text-purple-800', min: '3-month min' },
-  LEAD:     { price: '$1,500/mo', color: 'bg-red-100 text-red-800',   min: '6-month min' },
-  'In-Kind':{ price: 'Trade',   color: 'bg-green-100 text-green-800', min: 'Flexible' },
-  Custom:   { price: 'Custom',  color: 'bg-orange-100 text-orange-800', min: 'Flexible' },
+  BASE:      { price: '$500/mo',   color: 'bg-blue-100 text-blue-800',   min: '3-month min' },
+  CORE:      { price: '$800/mo',   color: 'bg-purple-100 text-purple-800', min: '3-month min' },
+  LEAD:      { price: '$1,500/mo', color: 'bg-red-100 text-red-800',     min: '6-month min' },
+  'In-Kind': { price: 'Trade',     color: 'bg-green-100 text-green-800', min: 'Flexible' },
+  Custom:    { price: 'Custom',    color: 'bg-orange-100 text-orange-800', min: 'Flexible' },
 }
 
 const STATUS_COLORS = {
-  Lead:         'bg-gray-100 text-gray-600',
-  Contacted:    'bg-yellow-100 text-yellow-800',
-  'In Talks':   'bg-orange-100 text-orange-800',
-  'Closed Won': 'bg-green-100 text-green-800',
-  'Closed Lost':'bg-red-50 text-red-400',
+  Lead:          'bg-gray-100 text-gray-600',
+  Contacted:     'bg-yellow-100 text-yellow-800',
+  'In Talks':    'bg-orange-100 text-orange-800',
+  'Closed Won':  'bg-green-100 text-green-800',
+  'Closed Lost': 'bg-red-50 text-red-400',
 }
 
 const STATUS_EMOJI = {
-  Lead: '👀',
-  Contacted: '📨',
-  'In Talks': '🤝',
-  'Closed Won': '✅',
-  'Closed Lost': '❌',
+  Lead: '👀', Contacted: '📨', 'In Talks': '🤝', 'Closed Won': '✅', 'Closed Lost': '❌',
 }
+
+const VOTES = [
+  { label: '✅ Back it',  value: '✅ Back it'  },
+  { label: '🚫 Pass',     value: '🚫 Pass'     },
+  { label: '🤔 Maybe',   value: '🤔 Maybe'    },
+]
 
 function formatDate(str) {
   if (!str) return ''
@@ -39,8 +41,122 @@ function formatCurrency(n) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
 }
 
+// ── Team Discussion (comments + voting) ──────────────────────────
+function TeamDiscussion({ pageId, author }) {
+  const [comments, setComments] = useState(null)
+  const [text, setText] = useState('')
+  const [posting, setPosting] = useState(false)
+  const [votingFor, setVotingFor] = useState(null)
+
+  useEffect(() => {
+    if (!pageId) return
+    fetch(`/api/notion/social-comment?pageId=${pageId}`)
+      .then(r => r.json())
+      .then(d => setComments(d.comments ?? []))
+      .catch(() => setComments([]))
+  }, [pageId])
+
+  async function post(content) {
+    setPosting(true)
+    try {
+      await fetch('/api/notion/social-comment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pageId, author: author || 'Team', text: content }),
+      })
+      const res = await fetch(`/api/notion/social-comment?pageId=${pageId}`)
+      const d = await res.json()
+      setComments(d.comments ?? [])
+    } catch { } finally { setPosting(false) }
+  }
+
+  async function handleVote(vote) {
+    setVotingFor(vote)
+    await post(vote)
+    setVotingFor(null)
+  }
+
+  async function handleComment(e) {
+    e.preventDefault()
+    if (!text.trim()) return
+    await post(text.trim())
+    setText('')
+  }
+
+  // Tally votes from comments
+  const tally = { '✅ Back it': 0, '🚫 Pass': 0, '🤔 Maybe': 0 }
+  comments?.forEach(c => {
+    const v = VOTES.find(v => c.text.includes(v.value))
+    if (v) tally[v.value]++
+  })
+  const totalVotes = Object.values(tally).reduce((a, b) => a + b, 0)
+
+  return (
+    <div className="mt-4 pt-4 border-t border-gray-100">
+      <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Team Vote 🗳️</p>
+
+      {/* Vote buttons */}
+      <div className="flex gap-2 mb-3">
+        {VOTES.map(v => (
+          <button key={v.value} onClick={() => handleVote(v.value)}
+            disabled={posting}
+            className={`flex-1 text-xs font-bold py-2 rounded-xl border-2 transition-colors active:scale-95 disabled:opacity-40 ${
+              tally[v.value] > 0
+                ? 'border-black bg-black text-white'
+                : 'border-gray-200 bg-white text-gray-700 hover:border-black'
+            }`}>
+            {votingFor === v.value ? '…' : v.label}
+            {tally[v.value] > 0 && <span className="ml-1 opacity-70">({tally[v.value]})</span>}
+          </button>
+        ))}
+      </div>
+
+      {/* Vote tally bar */}
+      {totalVotes > 0 && (
+        <div className="flex gap-1 h-1.5 rounded-full overflow-hidden mb-3">
+          {tally['✅ Back it'] > 0 && (
+            <div className="bg-green-400 transition-all" style={{ width: `${(tally['✅ Back it'] / totalVotes) * 100}%` }} />
+          )}
+          {tally['🤔 Maybe'] > 0 && (
+            <div className="bg-yellow-400 transition-all" style={{ width: `${(tally['🤔 Maybe'] / totalVotes) * 100}%` }} />
+          )}
+          {tally['🚫 Pass'] > 0 && (
+            <div className="bg-red-400 transition-all" style={{ width: `${(tally['🚫 Pass'] / totalVotes) * 100}%` }} />
+          )}
+        </div>
+      )}
+
+      {/* Comment thread */}
+      <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Notes & Context 💬</p>
+      {comments === null ? (
+        <p className="text-xs text-gray-400 mb-2">Loading…</p>
+      ) : comments.length === 0 ? (
+        <p className="text-xs text-gray-400 italic mb-2">No notes yet — add context below</p>
+      ) : (
+        <div className="space-y-2 mb-3 max-h-40 overflow-y-auto">
+          {comments.map(c => (
+            <div key={c.id} className="bg-gray-50 rounded-xl px-3 py-2">
+              <p className="text-xs text-gray-700 whitespace-pre-wrap">{c.text}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <form onSubmit={handleComment} className="flex gap-2">
+        <input value={text} onChange={e => setText(e.target.value)}
+          placeholder="Add context, history, concerns…"
+          className="flex-1 border-2 border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-dl-red" />
+        <button type="submit" disabled={posting || !text.trim()}
+          className="bg-black text-white text-xs font-bold px-4 py-2 rounded-xl active:scale-95 transition-transform disabled:opacity-40">
+          {posting ? '…' : 'Post'}
+        </button>
+      </form>
+    </div>
+  )
+}
+
 // ── Add Sponsor Drawer ────────────────────────────────────────────
-function AddDrawer({ onClose, onSaved, defaultUser }) {
+function AddDrawer({ onClose, onSaved, defaultUser, existingNames }) {
   const [form, setForm] = useState({
     companyName: '', contactName: '', tier: '', monthlyValue: '',
     notes: '', flaggedBy: defaultUser || '', status: 'Lead',
@@ -49,6 +165,10 @@ function AddDrawer({ onClose, onSaved, defaultUser }) {
   const [error, setError] = useState(null)
 
   function set(k, v) { setForm(f => ({ ...f, [k]: v })) }
+
+  const duplicate = form.companyName.trim().length > 2 &&
+    existingNames.some(n => n.toLowerCase().includes(form.companyName.trim().toLowerCase()) ||
+      form.companyName.trim().toLowerCase().includes(n.toLowerCase()))
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -81,7 +201,12 @@ function AddDrawer({ onClose, onSaved, defaultUser }) {
             <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-1">Company / Brand *</label>
             <input value={form.companyName} onChange={e => set('companyName', e.target.value)} required
               placeholder="e.g. Purina, Tractor Supply Co…"
-              className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-dl-red" />
+              className={`w-full border-2 rounded-xl px-3 py-2.5 text-sm focus:outline-none ${duplicate ? 'border-yellow-400 bg-yellow-50' : 'border-gray-200 focus:border-dl-red'}`} />
+            {duplicate && (
+              <p className="text-xs text-yellow-700 font-medium mt-1">
+                ⚠️ Heads up — a similar company is already in your pipeline. Check before adding!
+              </p>
+            )}
           </div>
           <div>
             <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-1">Contact Name</label>
@@ -118,7 +243,7 @@ function AddDrawer({ onClose, onSaved, defaultUser }) {
           <div>
             <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-1">Notes / Details</label>
             <textarea value={form.notes} onChange={e => set('notes', e.target.value)} rows={3}
-              placeholder="What they're interested in, timeline, any special requests…"
+              placeholder="What they're interested in, timeline, how they found us…"
               className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-dl-red resize-none" />
           </div>
           <div>
@@ -139,7 +264,7 @@ function AddDrawer({ onClose, onSaved, defaultUser }) {
 }
 
 // ── Edit Sheet ────────────────────────────────────────────────────
-function EditSheet({ sponsor, onClose, onSave }) {
+function EditSheet({ sponsor, onClose, onSave, author }) {
   const [status, setStatus] = useState(sponsor.status ?? 'Lead')
   const [tier, setTier] = useState(sponsor.tier ?? '')
   const [monthlyValue, setMonthlyValue] = useState(sponsor.monthlyValue ?? '')
@@ -156,7 +281,12 @@ function EditSheet({ sponsor, onClose, onSave }) {
     await fetch('/api/notion/leads', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: sponsor.id, status, tier: tier || null, monthlyValue: monthlyValue !== '' ? monthlyValue : null, contactName, notes, dealStart: dealStart || null, dealEnd: dealEnd || null }),
+      body: JSON.stringify({
+        id: sponsor.id, status, tier: tier || null,
+        monthlyValue: monthlyValue !== '' ? monthlyValue : null,
+        contactName, notes,
+        dealStart: dealStart || null, dealEnd: dealEnd || null,
+      }),
     })
     setSaving(false)
     setSaved(true)
@@ -169,13 +299,16 @@ function EditSheet({ sponsor, onClose, onSave }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className="w-full max-w-lg bg-white rounded-t-2xl p-6 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center justify-between mb-1">
           <div>
             <h2 className="text-xl font-bold">{sponsor.companyName}</h2>
             {tierInfo && <p className="text-xs text-gray-500 mt-0.5">{tierInfo.price} · {tierInfo.min}</p>}
           </div>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100">✕</button>
         </div>
+        {sponsor.flaggedBy && (
+          <p className="text-xs text-gray-400 mb-4">Added by {sponsor.flaggedBy}</p>
+        )}
 
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
@@ -227,8 +360,8 @@ function EditSheet({ sponsor, onClose, onSave }) {
 
           <div>
             <label className="block text-sm font-bold mb-1">Notes / Deliverables</label>
-            <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={4}
-              placeholder="What's owed? Ad copy details, deadlines, special requests…"
+            <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3}
+              placeholder="What's owed? Ad copy, deadlines, special requests…"
               className="w-full border-2 border-black rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-dl-red resize-none" />
           </div>
         </div>
@@ -237,6 +370,9 @@ function EditSheet({ sponsor, onClose, onSave }) {
           className={`w-full mt-5 font-bold py-3 rounded-xl text-sm transition-all active:scale-95 disabled:opacity-40 ${saved ? 'bg-green-500 text-white' : 'bg-dl-red text-white'}`}>
           {saving ? 'Saving…' : saved ? '✓ Saved!' : 'Save Changes'}
         </button>
+
+        {/* Team Discussion */}
+        <TeamDiscussion pageId={sponsor.id} author={author} />
       </div>
     </div>
   )
@@ -256,8 +392,8 @@ function SponsorCard({ sponsor, onTap }) {
       }`}>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-bold text-base leading-snug">{sponsor.companyName}</span>
-          {isActive && <span className="text-xs font-bold text-green-700">ACTIVE</span>}
+          <span className="font-bold text-sm leading-snug">{sponsor.companyName}</span>
+          {isActive && <span className="text-xs font-bold text-green-700 bg-green-100 px-1.5 py-0.5 rounded-full">ACTIVE</span>}
         </div>
         <div className="flex gap-1.5 mt-1.5 flex-wrap items-center">
           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusStyle}`}>
@@ -272,15 +408,19 @@ function SponsorCard({ sponsor, onTap }) {
             <span className="text-xs text-gray-500 font-medium">{formatCurrency(sponsor.monthlyValue)}/mo</span>
           )}
         </div>
-        {sponsor.contactName && <p className="text-xs text-gray-400 mt-1">👤 {sponsor.contactName}</p>}
-        {sponsor.lastContactDate && <p className="text-xs text-gray-400">Last contact: {formatDate(sponsor.lastContactDate)}</p>}
+        <div className="flex gap-3 mt-1 flex-wrap">
+          {sponsor.contactName && <p className="text-xs text-gray-400">👤 {sponsor.contactName}</p>}
+          {sponsor.flaggedBy && <p className="text-xs text-gray-400">· via {sponsor.flaggedBy}</p>}
+        </div>
         {isActive && sponsor.dealEnd && <p className="text-xs text-green-600 font-medium mt-0.5">Deal ends {formatDate(sponsor.dealEnd)}</p>}
       </div>
-      <div className="flex items-center gap-1 text-gray-300 group-hover:text-gray-600 transition-colors flex-shrink-0">
-        <span className="text-xs font-bold">Edit</span>
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
+      <div className="flex flex-col items-end gap-1 flex-shrink-0">
+        <div className="flex items-center gap-1 text-gray-300 group-hover:text-gray-600 transition-colors">
+          <span className="text-xs font-bold">View</span>
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
       </div>
     </button>
   )
@@ -351,11 +491,12 @@ export default function LeadsClient() {
   const activeSponsors = byStatus['Closed Won'] ?? []
   const totalMRR = activeSponsors.reduce((sum, s) => sum + (s.monthlyValue ?? 0), 0)
   const pipeline = (sponsors ?? []).filter(s => s.status !== 'Closed Lost' && s.status !== 'Closed Won').length
+  const existingNames = (sponsors ?? []).map(s => s.companyName)
 
   return (
     <>
-      {showAdd && <AddDrawer onClose={() => setShowAdd(false)} onSaved={handleSaved} defaultUser={user} />}
-      {selected && <EditSheet sponsor={selected} onClose={() => setSelected(null)} onSave={handleSave} />}
+      {showAdd && <AddDrawer onClose={() => setShowAdd(false)} onSaved={handleSaved} defaultUser={user} existingNames={existingNames} />}
+      {selected && <EditSheet sponsor={selected} onClose={() => setSelected(null)} onSave={handleSave} author={user} />}
 
       <main className="pb-20 min-h-screen bg-white">
         <div className="max-w-lg mx-auto px-4 pt-12">
