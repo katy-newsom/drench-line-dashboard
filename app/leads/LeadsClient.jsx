@@ -381,9 +381,10 @@ function EditSheet({ sponsor, onClose, onSave, author }) {
 // ── Sponsor card ──────────────────────────────────────────────────
 function SponsorCard({ sponsor, onTap }) {
   const tierInfo = TIER_DETAILS[sponsor.tier]
-  const statusStyle = STATUS_COLORS[sponsor.status] ?? 'bg-gray-100 text-gray-600'
-  const isActive = sponsor.status === 'Closed Won'
-  const isLost = sponsor.status === 'Closed Lost'
+  const statusStyle = STATUS_COLORS[effectiveStatus] ?? 'bg-gray-100 text-gray-600'
+  const effectiveStatus = sponsor.status ?? 'Lead'
+  const isActive = effectiveStatus === 'Closed Won'
+  const isLost = effectiveStatus === 'Closed Lost'
 
   return (
     <button onClick={() => onTap(sponsor)}
@@ -397,7 +398,7 @@ function SponsorCard({ sponsor, onTap }) {
         </div>
         <div className="flex gap-1.5 mt-1.5 flex-wrap items-center">
           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusStyle}`}>
-            {STATUS_EMOJI[sponsor.status]} {sponsor.status}
+            {STATUS_EMOJI[effectiveStatus]} {effectiveStatus}
           </span>
           {sponsor.tier && (
             <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${tierInfo?.color ?? 'bg-gray-100 text-gray-600'}`}>
@@ -484,7 +485,7 @@ export default function LeadsClient() {
   }
 
   const byStatus = STATUSES.reduce((acc, s) => {
-    acc[s] = (sponsors ?? []).filter(sp => sp.status === s)
+    acc[s] = (sponsors ?? []).filter(sp => (sp.status ?? 'Lead') === s)
     return acc
   }, {})
 
