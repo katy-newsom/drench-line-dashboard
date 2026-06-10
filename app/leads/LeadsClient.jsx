@@ -381,8 +381,8 @@ function EditSheet({ sponsor, onClose, onSave, author }) {
 // ── Sponsor card ──────────────────────────────────────────────────
 function SponsorCard({ sponsor, onTap }) {
   const tierInfo = TIER_DETAILS[sponsor.tier]
-  const statusStyle = STATUS_COLORS[effectiveStatus] ?? 'bg-gray-100 text-gray-600'
   const effectiveStatus = sponsor.status ?? 'Lead'
+  const statusStyle = STATUS_COLORS[effectiveStatus] ?? 'bg-gray-100 text-gray-600'
   const isActive = effectiveStatus === 'Closed Won'
   const isLost = effectiveStatus === 'Closed Lost'
 
