@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import Link from 'next/link'
 
 function formatDate(dateStr) {
   if (!dateStr) return ''
@@ -8,6 +9,42 @@ function formatDate(dateStr) {
     month: 'short',
     day: 'numeric',
   })
+}
+
+function formatCurrency(n) {
+  if (n == null) return null
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
+}
+
+function SponsorshipCard({ summary }) {
+  return (
+    <Link href="/leads" className="block bg-black text-white rounded-2xl p-5 active:scale-[0.98] transition-transform">
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Sponsorships 💰</p>
+        <span className="text-xs text-gray-400">View all →</span>
+      </div>
+      {summary ? (
+        <>
+          <div className="flex gap-6">
+            <StatPill label="Active" value={summary.activeCount} />
+            <div className="w-px bg-gray-700 self-stretch" />
+            <StatPill label="MRR" value={formatCurrency(summary.mrr)} />
+            <div className="w-px bg-gray-700 self-stretch" />
+            <StatPill label="In pipeline" value={summary.pipeline} />
+          </div>
+          {summary.invoicesPending > 0 && (
+            <div className="mt-4 pt-4 border-t border-gray-700">
+              <p className="text-sm font-bold text-dl-red">
+                🧾 {summary.invoicesPending} invoice{summary.invoicesPending > 1 ? 's' : ''} pending
+              </p>
+            </div>
+          )}
+        </>
+      ) : (
+        <p className="text-sm text-gray-400">No sponsorship data yet</p>
+      )}
+    </Link>
+  )
 }
 
 function StatPill({ label, value }) {
@@ -100,7 +137,7 @@ function NextEpisodeCard({ nextEpisode }) {
   )
 }
 
-export default function DashboardClient({ transistor, nextEpisode }) {
+export default function DashboardClient({ transistor, nextEpisode, sponsorSummary }) {
   return (
     <main className="pb-20 min-h-screen bg-white">
       <div className="max-w-lg mx-auto px-4 pt-12 space-y-5">
@@ -130,6 +167,9 @@ export default function DashboardClient({ transistor, nextEpisode }) {
             </div>
           )}
         </section>
+
+        {/* Sponsorships */}
+        <SponsorshipCard summary={sponsorSummary} />
 
         {/* What's Next */}
         <section>

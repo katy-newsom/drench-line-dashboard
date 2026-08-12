@@ -14,21 +14,21 @@ const TABS = [
     ),
   },
   {
+    href: '/leads',
+    label: 'Sponsors',
+    icon: (active) => (
+      <svg className="w-5 h-5" fill="none" stroke={active ? '#CC0000' : 'currentColor'} strokeWidth="2" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+  },
+  {
     href: '/episodes',
     label: 'Episodes',
     icon: (active) => (
       <svg className="w-5 h-5" fill="none" stroke={active ? '#CC0000' : 'currentColor'} strokeWidth="2" viewBox="0 0 24 24">
         <circle cx="12" cy="12" r="10" />
         <polygon fill={active ? '#CC0000' : 'currentColor'} stroke="none" points="10,8 16,12 10,16" />
-      </svg>
-    ),
-  },
-  {
-    href: '/leads',
-    label: 'Sponsors',
-    icon: (active) => (
-      <svg className="w-5 h-5" fill="none" stroke={active ? '#CC0000' : 'currentColor'} strokeWidth="2" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
     ),
   },

@@ -5,15 +5,14 @@ import { useUser } from '@/app/context/UserContext'
 
 const IdeaModal = dynamic(() => import('./modals/IdeaModal'))
 const GuestModal = dynamic(() => import('./modals/GuestModal'))
-const SponsorModal = dynamic(() => import('./modals/SponsorModal'))
-const ExpenseModal = dynamic(() => import('./modals/ExpenseModal'))
 const VoiceNoteModal = dynamic(() => import('./modals/VoiceNoteModal'))
 
+// Flag Sponsor / Log Expense were dropped — Sponsors and Expenses each
+// have their own "+ Add" button on-page now, and having both confused
+// the team about which one to use.
 const ACTIONS = [
   { key: 'idea', label: 'Submit Idea', icon: '💡' },
   { key: 'guest', label: 'Suggest Guest', icon: '👤' },
-  { key: 'sponsor', label: 'Flag Sponsor', icon: '💰' },
-  { key: 'expense', label: 'Log Expense', icon: '💸' },
   { key: 'voice', label: 'Voice Note', icon: '🎤' },
 ]
 
@@ -59,8 +58,6 @@ export default function FAB() {
 
       {modal === 'idea' && <IdeaModal user={user} onClose={closeModal} />}
       {modal === 'guest' && <GuestModal user={user} onClose={closeModal} />}
-      {modal === 'sponsor' && <SponsorModal user={user} onClose={closeModal} />}
-      {modal === 'expense' && <ExpenseModal user={user} onClose={closeModal} />}
       {modal === 'voice' && <VoiceNoteModal user={user} onClose={closeModal} />}
     </>
   )

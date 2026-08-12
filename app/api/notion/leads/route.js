@@ -17,6 +17,12 @@ function getDate(page, name) {
 function getNumber(page, name) {
   return page.properties[name]?.number ?? null
 }
+function getCheckbox(page, name) {
+  return page.properties[name]?.checkbox ?? false
+}
+function getRelationIds(page, name) {
+  return page.properties[name]?.relation?.map(r => r.id) ?? []
+}
 
 export async function GET() {
   if (!DB.SPONSORS) {
@@ -41,6 +47,10 @@ export async function GET() {
       dealEnd: getDate(page, 'Deal End'),
       notes: getText(page, 'Notes'),
       flaggedBy: getText(page, 'Flagged By'),
+      invoiceStatus: getSelect(page, 'Invoice Status') ?? 'Not Invoiced',
+      exclusiveCategory: getCheckbox(page, 'Exclusive Category'),
+      archived: getCheckbox(page, 'Archived'),
+      packageIds: getRelationIds(page, 'Sponsorship Package'),
     }))
 
     return NextResponse.json({ sponsors })
@@ -56,7 +66,7 @@ export async function POST(req) {
   }
   try {
     const body = await req.json()
-    const { companyName, contactName, notes, flaggedBy, tier, monthlyValue, status } = body
+    const { companyName, contactName, notes, flaggedBy, tier, monthlyValue, status, invoiceStatus, exclusiveCategory, packageIds } = body
 
     if (!companyName) {
       return NextResponse.json({ error: 'companyName is required' }, { status: 400 })
@@ -72,6 +82,9 @@ export async function POST(req) {
         ...(flaggedBy?.trim() && { 'Flagged By': { rich_text: [{ text: { content: flaggedBy.trim() } }] } }),
         ...(tier && { Tier: { select: { name: tier } } }),
         ...(monthlyValue != null && monthlyValue !== '' && { 'Monthly Value': { number: parseFloat(monthlyValue) } }),
+        'Invoice Status': { select: { name: invoiceStatus || 'Not Invoiced' } },
+        ...(exclusiveCategory != null && { 'Exclusive Category': { checkbox: !!exclusiveCategory } }),
+        ...(packageIds?.length > 0 && { 'Sponsorship Package': { relation: packageIds.map(id => ({ id })) } }),
         'Last Contact Date': { date: { start: new Date().toISOString().split('T')[0] } },
       },
     })
@@ -89,7 +102,7 @@ export async function PATCH(req) {
   }
   try {
     const body = await req.json()
-    const { id, status, tier, monthlyValue, contactName, notes, dealStart, dealEnd } = body
+    const { id, status, tier, monthlyValue, contactName, notes, dealStart, dealEnd, invoiceStatus, exclusiveCategory, archived, packageIds } = body
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
     const properties = {}
@@ -100,6 +113,10 @@ export async function PATCH(req) {
     if (notes != null) properties['Notes'] = { rich_text: [{ text: { content: notes } }] }
     if (dealStart != null) properties['Deal Start'] = dealStart ? { date: { start: dealStart } } : { date: null }
     if (dealEnd != null) properties['Deal End'] = dealEnd ? { date: { start: dealEnd } } : { date: null }
+    if (invoiceStatus) properties['Invoice Status'] = { select: { name: invoiceStatus } }
+    if (exclusiveCategory != null) properties['Exclusive Category'] = { checkbox: !!exclusiveCategory }
+    if (archived != null) properties['Archived'] = { checkbox: !!archived }
+    if (packageIds != null) properties['Sponsorship Package'] = { relation: packageIds.map(pid => ({ id: pid })) }
     // Always update last contact date on any edit
     properties['Last Contact Date'] = { date: { start: new Date().toISOString().split('T')[0] } }
 

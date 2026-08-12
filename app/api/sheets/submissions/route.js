@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server'
 
+// Without this, Next statically renders this route at build/deploy time
+// (since it's driven by a plain `fetch`) and the 5-min revalidate on that
+// fetch never gets a chance to fire — the route just serves whatever was
+// live the moment it was last deployed.
+export const dynamic = 'force-dynamic'
+
 const SHEETS = [
   {
     id: '1dzCOjQlppFO8BWkTZwQ373VhCfh0tS7qxBIN3TiF7BU',

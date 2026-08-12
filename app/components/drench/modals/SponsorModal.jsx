@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { ModalShell } from './IdeaModal'
 
 const TIERS = ['BASE', 'CORE', 'LEAD', 'In-Kind', 'Custom']
-const STATUSES = ['Lead', 'Contacted', 'In Talks']
+const STATUSES = ['Interested (Unconfirmed)', 'Lead', 'Contacted', 'In Talks']
 
 export default function SponsorModal({ user, onClose }) {
   const [companyName, setCompanyName] = useState('')

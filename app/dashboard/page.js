@@ -56,6 +56,38 @@ async function getTransistorStats() {
   }
 }
 
+async function getSponsorSummary() {
+  if (!DB.SPONSORS) return null
+  try {
+    const response = await notion.databases.query({ database_id: DB.SPONSORS, page_size: 100 })
+    let mrr = 0, activeCount = 0, invoicesPending = 0, pipeline = 0, featuredBooked = 0
+
+    for (const page of response.results) {
+      const status = page.properties['Status']?.select?.name ?? 'Lead'
+      const archived = page.properties['Archived']?.checkbox ?? false
+      if (archived || status === 'Interested (Unconfirmed)') continue
+
+      const monthlyValue = page.properties['Monthly Value']?.number ?? 0
+      const invoiceStatus = page.properties['Invoice Status']?.select?.name ?? 'Not Invoiced'
+      const isFeatured = (page.properties['Sponsorship Package']?.relation?.length ?? 0) > 0
+
+      if (status === 'Closed Won') {
+        activeCount++
+        mrr += monthlyValue
+        if (invoiceStatus !== 'Paid') invoicesPending++
+        if (isFeatured) featuredBooked++
+      } else if (status !== 'Closed Lost') {
+        pipeline++
+      }
+    }
+
+    return { activeCount, mrr, invoicesPending, pipeline, featuredBooked }
+  } catch (e) {
+    console.error('[SponsorSummary]', e.message)
+    return null
+  }
+}
+
 async function getNextEpisode() {
   try {
     const response = await notion.databases.query({
@@ -78,9 +110,10 @@ async function getNextEpisode() {
 }
 
 export default async function DashboardPage() {
-  const [transistor, nextEpisode] = await Promise.all([
+  const [transistor, nextEpisode, sponsorSummary] = await Promise.all([
     getTransistorStats(),
     getNextEpisode(),
+    getSponsorSummary(),
   ])
-  return <DashboardClient transistor={transistor} nextEpisode={nextEpisode} />
+  return <DashboardClient transistor={transistor} nextEpisode={nextEpisode} sponsorSummary={sponsorSummary} />
 }

@@ -2,8 +2,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useUser } from '../context/UserContext'
 
-const STATUSES = ['Lead', 'Contacted', 'In Talks', 'Closed Won', 'Closed Lost']
+const PIPELINE_STATUSES = ['Lead', 'Contacted', 'In Talks', 'Closed Won', 'Closed Lost']
+const ALL_STATUSES = ['Interested (Unconfirmed)', ...PIPELINE_STATUSES]
 const TIERS = ['BASE', 'CORE', 'LEAD', 'In-Kind', 'Custom']
+const INVOICE_STATUSES = ['Not Invoiced', 'Invoiced', 'Paid']
 
 const TIER_DETAILS = {
   BASE:      { price: '$500/mo',   color: 'bg-blue-100 text-blue-800',   min: '3-month min' },
@@ -14,6 +16,7 @@ const TIER_DETAILS = {
 }
 
 const STATUS_COLORS = {
+  'Interested (Unconfirmed)': 'bg-blue-50 text-blue-500',
   Lead:          'bg-gray-100 text-gray-600',
   Contacted:     'bg-yellow-100 text-yellow-800',
   'In Talks':    'bg-orange-100 text-orange-800',
@@ -22,7 +25,14 @@ const STATUS_COLORS = {
 }
 
 const STATUS_EMOJI = {
+  'Interested (Unconfirmed)': '👋',
   Lead: '👀', Contacted: '📨', 'In Talks': '🤝', 'Closed Won': '✅', 'Closed Lost': '❌',
+}
+
+const INVOICE_COLORS = {
+  'Not Invoiced': 'bg-gray-100 text-gray-500',
+  'Invoiced':     'bg-yellow-100 text-yellow-800',
+  'Paid':         'bg-green-100 text-green-800',
 }
 
 const VOTES = [
@@ -39,6 +49,13 @@ function formatDate(str) {
 function formatCurrency(n) {
   if (n == null) return null
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
+}
+
+// A sponsor counts as a "Featured Episode" deal once it's linked to a package
+// from the Packages DB (Breeder Spotlight, One-Off Episode, etc.) rather than
+// carrying a monthly Tier. A sponsor can have both, in principle.
+function isFeatured(sponsor) {
+  return (sponsor.packageIds ?? []).length > 0
 }
 
 // ── Team Discussion (comments + voting) ──────────────────────────
@@ -155,6 +172,54 @@ function TeamDiscussion({ pageId, author }) {
   )
 }
 
+// ── Packages reference card ────────────────────────────────────────
+function PackagesCard({ packages }) {
+  const [sectionOpen, setSectionOpen] = useState(false)
+  const [expanded, setExpanded] = useState(null)
+  if (!packages || packages.length === 0) return null
+
+  return (
+    <div className="bg-black text-white rounded-2xl p-4 mb-5">
+      <button onClick={() => setSectionOpen(v => !v)} className="w-full flex items-center justify-between gap-2">
+        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+          Your Packages · What's Included 📋
+        </p>
+        <svg className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${sectionOpen ? 'rotate-180' : ''}`}
+          fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {sectionOpen && (
+      <div className="space-y-2 mt-3">
+        {packages.map(pkg => {
+          const open = expanded === pkg.id
+          return (
+            <div key={pkg.id} className="bg-white/5 rounded-xl overflow-hidden">
+              <button onClick={() => setExpanded(open ? null : pkg.id)}
+                className="w-full text-left px-3 py-2.5 flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="font-bold text-sm">{pkg.name}</p>
+                  {pkg.price && <p className="text-xs text-gray-400 mt-0.5">{pkg.price}</p>}
+                </div>
+                <svg className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
+                  fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {open && pkg.deliverables && (
+                <div className="px-3 pb-3 pt-1">
+                  <p className="text-xs text-gray-300 leading-relaxed whitespace-pre-wrap">{pkg.deliverables}</p>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+      )}
+    </div>
+  )
+}
+
 // ── Add Sponsor Drawer ────────────────────────────────────────────
 function AddDrawer({ onClose, onSaved, defaultUser, existingNames }) {
   const [form, setForm] = useState({
@@ -214,14 +279,17 @@ function AddDrawer({ onClose, onSaved, defaultUser, existingNames }) {
               placeholder="Who do we talk to?"
               className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-dl-red" />
           </div>
+          <div>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-1">Status</label>
+            <select value={form.status} onChange={e => set('status', e.target.value)}
+              className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-dl-red bg-white">
+              {ALL_STATUSES.map(s => <option key={s}>{s}</option>)}
+            </select>
+            {form.status === 'Interested (Unconfirmed)' && (
+              <p className="text-xs text-gray-400 mt-1">Goes in the Interest List — won't clutter the real pipeline until they reply.</p>
+            )}
+          </div>
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-1">Status</label>
-              <select value={form.status} onChange={e => set('status', e.target.value)}
-                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-dl-red bg-white">
-                {STATUSES.map(s => <option key={s}>{s}</option>)}
-              </select>
-            </div>
             <div>
               <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-1">Tier Interest</label>
               <select value={form.tier} onChange={e => set('tier', e.target.value)}
@@ -230,14 +298,14 @@ function AddDrawer({ onClose, onSaved, defaultUser, existingNames }) {
                 {TIERS.map(t => <option key={t}>{t}</option>)}
               </select>
             </div>
-          </div>
-          <div>
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-1">Monthly Value ($)</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 font-bold">$</span>
-              <input type="number" min="0" value={form.monthlyValue} onChange={e => set('monthlyValue', e.target.value)}
-                placeholder="Leave blank for In-Kind"
-                className="w-full border-2 border-gray-200 rounded-xl pl-7 pr-3 py-2.5 text-sm focus:outline-none focus:border-dl-red" />
+            <div>
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-1">Monthly Value ($)</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 font-bold">$</span>
+                <input type="number" min="0" value={form.monthlyValue} onChange={e => set('monthlyValue', e.target.value)}
+                  placeholder="In-Kind"
+                  className="w-full border-2 border-gray-200 rounded-xl pl-7 pr-3 py-2.5 text-sm focus:outline-none focus:border-dl-red" />
+              </div>
             </div>
           </div>
           <div>
@@ -264,7 +332,7 @@ function AddDrawer({ onClose, onSaved, defaultUser, existingNames }) {
 }
 
 // ── Edit Sheet ────────────────────────────────────────────────────
-function EditSheet({ sponsor, onClose, onSave, author }) {
+function EditSheet({ sponsor, packages, onClose, onSave, author }) {
   const [status, setStatus] = useState(sponsor.status ?? 'Lead')
   const [tier, setTier] = useState(sponsor.tier ?? '')
   const [monthlyValue, setMonthlyValue] = useState(sponsor.monthlyValue ?? '')
@@ -272,8 +340,16 @@ function EditSheet({ sponsor, onClose, onSave, author }) {
   const [notes, setNotes] = useState(sponsor.notes ?? '')
   const [dealStart, setDealStart] = useState(sponsor.dealStart ?? '')
   const [dealEnd, setDealEnd] = useState(sponsor.dealEnd ?? '')
+  const [invoiceStatus, setInvoiceStatus] = useState(sponsor.invoiceStatus ?? 'Not Invoiced')
+  const [exclusiveCategory, setExclusiveCategory] = useState(sponsor.exclusiveCategory ?? false)
+  const [archived, setArchived] = useState(sponsor.archived ?? false)
+  const [packageIds, setPackageIds] = useState(sponsor.packageIds ?? [])
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+
+  function togglePackage(id) {
+    setPackageIds(ids => ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id])
+  }
 
   async function save() {
     setSaving(true)
@@ -286,11 +362,17 @@ function EditSheet({ sponsor, onClose, onSave, author }) {
         monthlyValue: monthlyValue !== '' ? monthlyValue : null,
         contactName, notes,
         dealStart: dealStart || null, dealEnd: dealEnd || null,
+        invoiceStatus, exclusiveCategory, archived, packageIds,
       }),
     })
     setSaving(false)
     setSaved(true)
-    onSave({ ...sponsor, status, tier: tier || null, monthlyValue: monthlyValue !== '' ? parseFloat(monthlyValue) : null, contactName, notes, dealStart: dealStart || null, dealEnd: dealEnd || null })
+    onSave({
+      ...sponsor, status, tier: tier || null,
+      monthlyValue: monthlyValue !== '' ? parseFloat(monthlyValue) : null,
+      contactName, notes, dealStart: dealStart || null, dealEnd: dealEnd || null,
+      invoiceStatus, exclusiveCategory, archived, packageIds,
+    })
     setTimeout(onClose, 800)
   }
 
@@ -316,7 +398,7 @@ function EditSheet({ sponsor, onClose, onSave, author }) {
               <label className="block text-sm font-bold mb-1">Status</label>
               <select value={status} onChange={e => setStatus(e.target.value)}
                 className="w-full border-2 border-black rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-dl-red bg-white">
-                {STATUSES.map(s => <option key={s}>{s}</option>)}
+                {ALL_STATUSES.map(s => <option key={s}>{s}</option>)}
               </select>
             </div>
             <div>
@@ -358,12 +440,45 @@ function EditSheet({ sponsor, onClose, onSave, author }) {
             </div>
           </div>
 
+          <div className="pt-2 border-t border-gray-100">
+            <label className="block text-sm font-bold mb-1">Invoice Status 🧾</label>
+            <select value={invoiceStatus} onChange={e => setInvoiceStatus(e.target.value)}
+              className="w-full border-2 border-black rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-dl-red bg-white">
+              {INVOICE_STATUSES.map(s => <option key={s}>{s}</option>)}
+            </select>
+          </div>
+
+          {packages?.length > 0 && (
+            <div>
+              <label className="block text-sm font-bold mb-1">Featured Episode / One-Off Package</label>
+              <p className="text-xs text-gray-400 mb-2">Link this if it's a one-off deal (Breeder Spotlight, etc.) rather than a monthly package.</p>
+              <div className="space-y-1.5">
+                {packages.map(pkg => (
+                  <label key={pkg.id} className="flex items-center gap-2 text-sm border-2 border-gray-200 rounded-lg px-3 py-2 cursor-pointer">
+                    <input type="checkbox" checked={packageIds.includes(pkg.id)} onChange={() => togglePackage(pkg.id)} />
+                    <span>{pkg.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <label className="flex items-center gap-2 text-sm font-bold cursor-pointer">
+            <input type="checkbox" checked={exclusiveCategory} onChange={e => setExclusiveCategory(e.target.checked)} />
+            Wants category exclusivity 🔒
+          </label>
+
           <div>
             <label className="block text-sm font-bold mb-1">Notes / Deliverables</label>
             <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3}
               placeholder="What's owed? Ad copy, deadlines, special requests…"
               className="w-full border-2 border-black rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-dl-red resize-none" />
           </div>
+
+          <label className="flex items-center gap-2 text-sm font-bold cursor-pointer text-gray-500 pt-2 border-t border-gray-100">
+            <input type="checkbox" checked={archived} onChange={e => setArchived(e.target.checked)} />
+            Archive this lead
+          </label>
         </div>
 
         <button onClick={save} disabled={saving}
@@ -379,12 +494,13 @@ function EditSheet({ sponsor, onClose, onSave, author }) {
 }
 
 // ── Sponsor card ──────────────────────────────────────────────────
-function SponsorCard({ sponsor, onTap }) {
+function SponsorCard({ sponsor, packagesById, onTap }) {
   const tierInfo = TIER_DETAILS[sponsor.tier]
   const effectiveStatus = sponsor.status ?? 'Lead'
   const statusStyle = STATUS_COLORS[effectiveStatus] ?? 'bg-gray-100 text-gray-600'
   const isActive = effectiveStatus === 'Closed Won'
   const isLost = effectiveStatus === 'Closed Lost'
+  const linkedPackages = (sponsor.packageIds ?? []).map(id => packagesById?.[id]?.name).filter(Boolean)
 
   return (
     <button onClick={() => onTap(sponsor)}
@@ -395,6 +511,7 @@ function SponsorCard({ sponsor, onTap }) {
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-bold text-sm leading-snug">{sponsor.companyName}</span>
           {isActive && <span className="text-xs font-bold text-green-700 bg-green-100 px-1.5 py-0.5 rounded-full">ACTIVE</span>}
+          {sponsor.exclusiveCategory && <span className="text-xs" title="Wants category exclusivity">🔒</span>}
         </div>
         <div className="flex gap-1.5 mt-1.5 flex-wrap items-center">
           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusStyle}`}>
@@ -405,8 +522,18 @@ function SponsorCard({ sponsor, onTap }) {
               {sponsor.tier}
             </span>
           )}
+          {linkedPackages.map(name => (
+            <span key={name} className="text-xs px-2 py-0.5 rounded-full font-bold bg-indigo-100 text-indigo-700">
+              {name}
+            </span>
+          ))}
           {sponsor.monthlyValue != null && (
             <span className="text-xs text-gray-500 font-medium">{formatCurrency(sponsor.monthlyValue)}/mo</span>
+          )}
+          {isActive && (
+            <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${INVOICE_COLORS[sponsor.invoiceStatus] ?? INVOICE_COLORS['Not Invoiced']}`}>
+              🧾 {sponsor.invoiceStatus ?? 'Not Invoiced'}
+            </span>
           )}
         </div>
         <div className="flex gap-3 mt-1 flex-wrap">
@@ -427,9 +554,9 @@ function SponsorCard({ sponsor, onTap }) {
   )
 }
 
-// ── Status section ────────────────────────────────────────────────
-function StatusSection({ status, sponsors, onTap }) {
-  const [collapsed, setCollapsed] = useState(status === 'Closed Lost')
+// ── Status section (funnel) ────────────────────────────────────────
+function StatusSection({ status, sponsors, packagesById, onTap, defaultCollapsed }) {
+  const [collapsed, setCollapsed] = useState(defaultCollapsed ?? status === 'Closed Lost')
   if (sponsors.length === 0) return null
   return (
     <div className="mb-5">
@@ -445,7 +572,44 @@ function StatusSection({ status, sponsors, onTap }) {
       </button>
       {!collapsed && (
         <div className="space-y-2">
-          {sponsors.map(s => <SponsorCard key={s.id} sponsor={s} onTap={onTap} />)}
+          {sponsors.map(s => <SponsorCard key={s.id} sponsor={s} packagesById={packagesById} onTap={onTap} />)}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Collapsible group (Interest List / Archived) ───────────────────
+function CollapsibleGroup({ title, emoji, sponsors, onTap, hint, onQuickAction, quickActionLabel }) {
+  const [open, setOpen] = useState(false)
+  if (sponsors.length === 0) return null
+  return (
+    <div className="mb-6 border-t-2 border-dashed border-gray-100 pt-4">
+      <button onClick={() => setOpen(v => !v)} className="flex items-center gap-2 mb-1 w-full text-left">
+        <span className="font-bold text-sm">{emoji} {title}</span>
+        <span className="text-xs text-gray-400 font-medium">{sponsors.length}</span>
+        <svg className={`w-3.5 h-3.5 text-gray-400 ml-auto transition-transform ${open ? 'rotate-180' : ''}`}
+          fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {hint && <p className="text-xs text-gray-400 mb-3">{hint}</p>}
+      {open && (
+        <div className="space-y-2 mt-3">
+          {sponsors.map(s => (
+            <div key={s.id} className="w-full rounded-2xl p-3.5 border-2 border-gray-100 bg-gray-50 flex items-center gap-3">
+              <button onClick={() => onTap(s)} className="flex-1 min-w-0 text-left active:scale-[0.98] transition-transform">
+                <p className="font-bold text-sm">{s.companyName}</p>
+                {s.notes && <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{s.notes}</p>}
+              </button>
+              {onQuickAction && (
+                <button onClick={() => onQuickAction(s)}
+                  className="flex-shrink-0 bg-black text-white text-xs font-bold px-3 py-2 rounded-full active:scale-95 transition-transform whitespace-nowrap">
+                  {quickActionLabel}
+                </button>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -456,6 +620,7 @@ function StatusSection({ status, sponsors, onTap }) {
 export default function LeadsClient() {
   const { user } = useUser()
   const [sponsors, setSponsors] = useState(null)
+  const [packages, setPackages] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [showAdd, setShowAdd] = useState(false)
@@ -465,10 +630,17 @@ export default function LeadsClient() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/notion/leads')
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Failed to load')
-      setSponsors(data.sponsors ?? [])
+      const [sponsorsRes, packagesRes] = await Promise.all([
+        fetch('/api/notion/leads'),
+        fetch('/api/notion/packages'),
+      ])
+      const sponsorsData = await sponsorsRes.json()
+      if (!sponsorsRes.ok) throw new Error(sponsorsData.error ?? 'Failed to load')
+      setSponsors(sponsorsData.sponsors ?? [])
+      if (packagesRes.ok) {
+        const packagesData = await packagesRes.json()
+        setPackages(packagesData.packages ?? [])
+      }
     } catch (e) {
       setError(e.message)
     } finally {
@@ -484,20 +656,44 @@ export default function LeadsClient() {
     setSelected(null)
   }
 
-  const byStatus = STATUSES.reduce((acc, s) => {
-    acc[s] = (sponsors ?? []).filter(sp => (sp.status ?? 'Lead') === s)
+  async function moveToPipeline(sponsor) {
+    setSponsors(prev => prev.map(s => s.id === sponsor.id ? { ...s, status: 'Lead' } : s))
+    await fetch('/api/notion/leads', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: sponsor.id, status: 'Lead' }),
+    })
+  }
+
+  const packagesById = Object.fromEntries(packages.map(p => [p.id, p]))
+
+  const live = (sponsors ?? []).filter(s => !s.archived && s.status !== 'Interested (Unconfirmed)')
+  const interested = (sponsors ?? []).filter(s => !s.archived && s.status === 'Interested (Unconfirmed)')
+  const archived = (sponsors ?? []).filter(s => s.archived)
+
+  const packageSponsors = live.filter(s => !isFeatured(s))
+  const featuredSponsors = live.filter(isFeatured)
+
+  const byStatus = PIPELINE_STATUSES.reduce((acc, s) => {
+    acc[s] = packageSponsors.filter(sp => (sp.status ?? 'Lead') === s)
+    return acc
+  }, {})
+  const featuredByStatus = PIPELINE_STATUSES.reduce((acc, s) => {
+    acc[s] = featuredSponsors.filter(sp => (sp.status ?? 'Lead') === s)
     return acc
   }, {})
 
-  const activeSponsors = byStatus['Closed Won'] ?? []
+  const activeSponsors = [...byStatus['Closed Won'], ...featuredByStatus['Closed Won']]
   const totalMRR = activeSponsors.reduce((sum, s) => sum + (s.monthlyValue ?? 0), 0)
-  const pipeline = (sponsors ?? []).filter(s => s.status !== 'Closed Lost' && s.status !== 'Closed Won').length
+  const pipeline = packageSponsors.filter(s => s.status !== 'Closed Lost' && s.status !== 'Closed Won').length
+    + featuredSponsors.filter(s => s.status !== 'Closed Lost' && s.status !== 'Closed Won').length
+  const invoicesPending = activeSponsors.filter(s => (s.invoiceStatus ?? 'Not Invoiced') !== 'Paid').length
   const existingNames = (sponsors ?? []).map(s => s.companyName)
 
   return (
     <>
       {showAdd && <AddDrawer onClose={() => setShowAdd(false)} onSaved={handleSaved} defaultUser={user} existingNames={existingNames} />}
-      {selected && <EditSheet sponsor={selected} onClose={() => setSelected(null)} onSave={handleSave} author={user} />}
+      {selected && <EditSheet sponsor={selected} packages={packages} onClose={() => setSelected(null)} onSave={handleSave} author={user} />}
 
       <main className="pb-20 min-h-screen bg-white">
         <div className="max-w-lg mx-auto px-4 pt-12">
@@ -511,6 +707,9 @@ export default function LeadsClient() {
                   {activeSponsors.length > 0
                     ? `${activeSponsors.length} active · ${formatCurrency(totalMRR)}/mo · ${pipeline} in pipeline`
                     : pipeline > 0 ? `${pipeline} in pipeline — keep pushing!` : 'Start building your pipeline 👇'}
+                  {invoicesPending > 0 && (
+                    <span className="text-dl-red font-bold"> · {invoicesPending} invoice{invoicesPending > 1 ? 's' : ''} pending</span>
+                  )}
                 </p>
               )}
             </div>
@@ -526,19 +725,8 @@ export default function LeadsClient() {
             </div>
           </div>
 
-          {/* Tier reference card */}
-          <div className="bg-black text-white rounded-2xl p-4 mb-5">
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Your Packages</p>
-            <div className="grid grid-cols-3 gap-3">
-              {['BASE', 'CORE', 'LEAD'].map(t => (
-                <div key={t} className="text-center">
-                  <span className={`text-xs font-black px-2 py-0.5 rounded-full ${TIER_DETAILS[t].color}`}>{t}</span>
-                  <p className="text-sm font-bold text-white mt-1">{TIER_DETAILS[t].price}</p>
-                  <p className="text-[10px] text-gray-500 mt-0.5">{TIER_DETAILS[t].min}</p>
-                </div>
-              ))}
-            </div>
-          </div>
+          {/* Packages reference card */}
+          <PackagesCard packages={packages} />
 
           {loading && (
             <div className="space-y-2">
@@ -563,9 +751,26 @@ export default function LeadsClient() {
 
           {!loading && !error && sponsors && sponsors.length > 0 && (
             <div>
-              {STATUSES.map(status => (
-                <StatusSection key={status} status={status} sponsors={byStatus[status]} onTap={setSelected} />
+              <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wide mb-3">Package Sponsors</h2>
+              {PIPELINE_STATUSES.map(status => (
+                <StatusSection key={status} status={status} sponsors={byStatus[status]} packagesById={packagesById} onTap={setSelected} />
               ))}
+
+              {featuredSponsors.length > 0 && (
+                <>
+                  <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wide mb-3 mt-2">Featured Episodes</h2>
+                  {PIPELINE_STATUSES.map(status => (
+                    <StatusSection key={status} status={status} sponsors={featuredByStatus[status]} packagesById={packagesById} onTap={setSelected} defaultCollapsed={false} />
+                  ))}
+                </>
+              )}
+
+              <CollapsibleGroup
+                title="Interest List" emoji="👋" sponsors={interested} onTap={setSelected}
+                hint="They've reached out but haven't replied yet — move them into the real pipeline once they do."
+                onQuickAction={moveToPipeline} quickActionLabel="→ Pipeline"
+              />
+              <CollapsibleGroup title="Archived" emoji="🗄️" sponsors={archived} onTap={setSelected} />
             </div>
           )}
 
