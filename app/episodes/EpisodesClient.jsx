@@ -1,6 +1,8 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import confetti from 'canvas-confetti'
+import { useUser } from '@/app/context/UserContext'
+import CommentThread from '@/app/components/drench/CommentThread'
 
 const STATUSES = ['Idea', 'Planned', 'Recorded', 'Editing', 'Scheduled', 'Live']
 
@@ -37,6 +39,7 @@ function formatDate(dateStr) {
 
 
 function EpisodeEditSheet({ episode, onClose, onSave }) {
+  const { user } = useUser()
   const [title, setTitle] = useState(episode.title)
   const [status, setStatus] = useState(episode.status)
   const [episodeNumber, setEpisodeNumber] = useState(episode.episodeNumber ?? '')
@@ -130,6 +133,11 @@ function EpisodeEditSheet({ episode, onClose, onSave }) {
           className="w-full mt-5 bg-dl-red text-white font-bold py-3 rounded-lg disabled:opacity-50 active:scale-95 transition-transform">
           {saving ? 'Saving...' : 'Save Changes'}
         </button>
+
+        {/* Team comment thread */}
+        <div className="mt-4">
+          <CommentThread pageId={episode.id} author={user} />
+        </div>
       </div>
     </div>
   )

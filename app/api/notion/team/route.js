@@ -8,11 +8,15 @@ export async function GET() {
       sorts: [{ property: 'Name', direction: 'ascending' }],
     })
 
-    const team = response.results.map(page => ({
-      id: page.id,
-      name: extractTitle(page),
-      role: extractText(page.properties['Role'] ?? page.properties['Roles'] ?? null),
-    }))
+    const team = response.results
+      .map(page => ({
+        id: page.id,
+        name: extractTitle(page),
+        role: extractText(page.properties['Role'] ?? page.properties['Roles'] ?? null),
+      }))
+      // Hide placeholder entries like "Editor/Social Hire (TBD)" — any name
+      // with "TBD" inside parentheses is a role that hasn't been filled yet
+      .filter(member => !/\([^)]*TBD[^)]*\)/i.test(member.name))
 
     return NextResponse.json({ team })
   } catch (err) {

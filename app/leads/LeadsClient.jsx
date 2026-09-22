@@ -1,10 +1,10 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { useUser } from '../context/UserContext'
+import { DEAL_TYPES, dealTypeOf, summarizeSponsors } from '@/lib/sponsors'
 
 const PIPELINE_STATUSES = ['Lead', 'Contacted', 'In Talks', 'Closed Won', 'Closed Lost']
 const ALL_STATUSES = ['Interested (Unconfirmed)', ...PIPELINE_STATUSES]
-const TIERS = ['BASE', 'CORE', 'LEAD', 'In-Kind', 'Custom']
 const INVOICE_STATUSES = ['Not Invoiced', 'Invoiced', 'Paid']
 
 const TIER_DETAILS = {
@@ -51,11 +51,52 @@ function formatCurrency(n) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
 }
 
-// A sponsor counts as a "Featured Episode" deal once it's linked to a package
-// from the Packages DB (Breeder Spotlight, One-Off Episode, etc.) rather than
-// carrying a monthly Tier. A sponsor can have both, in principle.
-function isFeatured(sponsor) {
-  return (sponsor.packageIds ?? []).length > 0
+const DEAL_TYPE_HINTS = {
+  Recurring:  'Monthly package (BASE / CORE / LEAD) — counts toward monthly recurring.',
+  'One-Time': 'Breeder Spotlight or one-off episode — a single fee, no monthly amount or end date.',
+  'In-Kind':  'Trade deal — no cash, just track the term.',
+}
+const RECURRING_TIERS = ['BASE', 'CORE', 'LEAD']
+
+// Anything with a status the app doesn't know (e.g. one typed straight into
+// Notion) lands in Lead instead of disappearing from the list.
+function statusOf(sponsor) {
+  return PIPELINE_STATUSES.includes(sponsor.status) ? sponsor.status : 'Lead'
+}
+
+function DealTypePicker({ value, onChange, dark }) {
+  return (
+    <div>
+      <div className="grid grid-cols-3 gap-1.5">
+        {DEAL_TYPES.map(t => (
+          <button key={t} type="button" onClick={() => onChange(t)}
+            className={`text-xs font-bold py-2 rounded-lg border-2 transition-colors ${
+              value === t ? 'border-black bg-black text-white' : `${dark ? 'border-black' : 'border-gray-200'} bg-white text-gray-700`
+            }`}>
+            {t === 'Recurring' ? '🔁 Monthly' : t === 'One-Time' ? '🎙️ One-Time' : '🤝 In-Kind'}
+          </button>
+        ))}
+      </div>
+      {value && <p className="text-xs text-gray-400 mt-1">{DEAL_TYPE_HINTS[value]}</p>}
+    </div>
+  )
+}
+
+function DollarInput({ value, onChange, placeholder, className }) {
+  return (
+    <div className="relative">
+      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 font-bold">$</span>
+      <input type="number" min="0" value={value} onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        className={`w-full pl-7 pr-3 text-sm focus:outline-none focus:border-dl-red ${className}`} />
+    </div>
+  )
+}
+
+// One-time deals are tied to Breeder Spotlight / One-Off packages; the monthly
+// BASE/CORE/LEAD packages are chosen with Tier instead.
+function oneTimePackages(packages) {
+  return (packages ?? []).filter(p => !/\b(BASE|CORE|LEAD)\b/.test(p.name))
 }
 
 // ── Team Discussion (comments + voting) ──────────────────────────
@@ -221,11 +262,13 @@ function PackagesCard({ packages }) {
 }
 
 // ── Add Sponsor Drawer ────────────────────────────────────────────
-function AddDrawer({ onClose, onSaved, defaultUser, existingNames }) {
+function AddDrawer({ onClose, onSaved, defaultUser, existingNames, packages }) {
   const [form, setForm] = useState({
-    companyName: '', contactName: '', tier: '', monthlyValue: '',
+    companyName: '', contactName: '', dealType: '', tier: '', monthlyValue: '',
+    oneTimeFee: '', episodeDate: '', packageIds: [],
     notes: '', flaggedBy: defaultUser || '', status: 'Lead',
   })
+  const spotlightPackages = oneTimePackages(packages)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
 
@@ -241,10 +284,17 @@ function AddDrawer({ onClose, onSaved, defaultUser, existingNames }) {
     setSaving(true)
     setError(null)
     try {
+      // Only send the money fields that match the deal type, so a one-off
+      // can never end up in the monthly number.
+      const body = { ...form }
+      if (form.dealType !== 'Recurring') body.monthlyValue = ''
+      if (form.dealType !== 'One-Time') { body.oneTimeFee = ''; body.episodeDate = ''; body.packageIds = [] }
+      if (form.dealType === 'One-Time' && !body.tier) body.tier = 'Custom'
+      if (form.dealType === 'In-Kind') body.tier = 'In-Kind'
       const res = await fetch('/api/notion/leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify(body),
       })
       if (!res.ok) { const d = await res.json(); throw new Error(d.error ?? 'Failed') }
       onSaved()
@@ -289,25 +339,54 @@ function AddDrawer({ onClose, onSaved, defaultUser, existingNames }) {
               <p className="text-xs text-gray-400 mt-1">Goes in the Interest List — won't clutter the real pipeline until they reply.</p>
             )}
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-1">Tier Interest</label>
-              <select value={form.tier} onChange={e => set('tier', e.target.value)}
-                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-dl-red bg-white">
-                <option value="">— Unknown</option>
-                {TIERS.map(t => <option key={t}>{t}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-1">Monthly Value ($)</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 font-bold">$</span>
-                <input type="number" min="0" value={form.monthlyValue} onChange={e => set('monthlyValue', e.target.value)}
-                  placeholder="In-Kind"
-                  className="w-full border-2 border-gray-200 rounded-xl pl-7 pr-3 py-2.5 text-sm focus:outline-none focus:border-dl-red" />
+          <div>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-1">Deal Type</label>
+            <DealTypePicker value={form.dealType} onChange={v => set('dealType', v)} />
+          </div>
+          {form.dealType === 'Recurring' && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-1">Tier</label>
+                <select value={form.tier} onChange={e => set('tier', e.target.value)}
+                  className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-dl-red bg-white">
+                  <option value="">— Unknown</option>
+                  {RECURRING_TIERS.map(t => <option key={t}>{t}</option>)}
+                  <option>Custom</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-1">Per Month</label>
+                <DollarInput value={form.monthlyValue} onChange={v => set('monthlyValue', v)} placeholder="800"
+                  className="border-2 border-gray-200 rounded-xl py-2.5" />
               </div>
             </div>
-          </div>
+          )}
+          {form.dealType === 'One-Time' && (
+            <>
+              {spotlightPackages.length > 0 && (
+                <div>
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-1">Package</label>
+                  <select value={form.packageIds[0] ?? ''} onChange={e => set('packageIds', e.target.value ? [e.target.value] : [])}
+                    className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-dl-red bg-white">
+                    <option value="">— Custom one-off</option>
+                    {spotlightPackages.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-1">Fee (total)</label>
+                  <DollarInput value={form.oneTimeFee} onChange={v => set('oneTimeFee', v)} placeholder="1500"
+                    className="border-2 border-gray-200 rounded-xl py-2.5" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-1">Episode Date</label>
+                  <input type="date" value={form.episodeDate} onChange={e => set('episodeDate', e.target.value)}
+                    className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-dl-red" />
+                </div>
+              </div>
+            </>
+          )}
           <div>
             <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-1">Notes / Details</label>
             <textarea value={form.notes} onChange={e => set('notes', e.target.value)} rows={3}
@@ -334,8 +413,11 @@ function AddDrawer({ onClose, onSaved, defaultUser, existingNames }) {
 // ── Edit Sheet ────────────────────────────────────────────────────
 function EditSheet({ sponsor, packages, onClose, onSave, author }) {
   const [status, setStatus] = useState(sponsor.status ?? 'Lead')
+  const [dealType, setDealType] = useState(dealTypeOf(sponsor))
   const [tier, setTier] = useState(sponsor.tier ?? '')
   const [monthlyValue, setMonthlyValue] = useState(sponsor.monthlyValue ?? '')
+  const [oneTimeFee, setOneTimeFee] = useState(sponsor.oneTimeFee ?? '')
+  const [episodeDate, setEpisodeDate] = useState(sponsor.episodeDate ?? '')
   const [contactName, setContactName] = useState(sponsor.contactName ?? '')
   const [notes, setNotes] = useState(sponsor.notes ?? '')
   const [dealStart, setDealStart] = useState(sponsor.dealStart ?? '')
@@ -347,6 +429,9 @@ function EditSheet({ sponsor, packages, onClose, onSave, author }) {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
+  const spotlightPackages = oneTimePackages(packages)
+  const spotlightIds = new Set(spotlightPackages.map(p => p.id))
+
   function togglePackage(id) {
     setPackageIds(ids => ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id])
   }
@@ -354,25 +439,29 @@ function EditSheet({ sponsor, packages, onClose, onSave, author }) {
   async function save() {
     setSaving(true)
     setSaved(false)
+    // Clear the fields that don't belong to this deal type so the money is
+    // only ever counted in one place.
+    const isRecurring = dealType === 'Recurring'
+    const isOneTime = dealType === 'One-Time'
+    const updates = {
+      status, dealType,
+      tier: dealType === 'In-Kind' ? 'In-Kind' : (tier || null),
+      monthlyValue: isRecurring && monthlyValue !== '' ? parseFloat(monthlyValue) : null,
+      oneTimeFee: isOneTime && oneTimeFee !== '' ? parseFloat(oneTimeFee) : null,
+      episodeDate: isOneTime ? (episodeDate || null) : null,
+      dealStart: isOneTime ? null : (dealStart || null),
+      dealEnd: isOneTime ? null : (dealEnd || null),
+      packageIds: isOneTime ? packageIds : packageIds.filter(id => !spotlightIds.has(id)),
+      contactName, notes, invoiceStatus, exclusiveCategory, archived,
+    }
     await fetch('/api/notion/leads', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: sponsor.id, status, tier: tier || null,
-        monthlyValue: monthlyValue !== '' ? monthlyValue : null,
-        contactName, notes,
-        dealStart: dealStart || null, dealEnd: dealEnd || null,
-        invoiceStatus, exclusiveCategory, archived, packageIds,
-      }),
+      body: JSON.stringify({ id: sponsor.id, ...updates }),
     })
     setSaving(false)
     setSaved(true)
-    onSave({
-      ...sponsor, status, tier: tier || null,
-      monthlyValue: monthlyValue !== '' ? parseFloat(monthlyValue) : null,
-      contactName, notes, dealStart: dealStart || null, dealEnd: dealEnd || null,
-      invoiceStatus, exclusiveCategory, archived, packageIds,
-    })
+    onSave({ ...sponsor, ...updates })
     setTimeout(onClose, 800)
   }
 
@@ -401,14 +490,22 @@ function EditSheet({ sponsor, packages, onClose, onSave, author }) {
                 {ALL_STATUSES.map(s => <option key={s}>{s}</option>)}
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-bold mb-1">Tier</label>
-              <select value={tier} onChange={e => setTier(e.target.value)}
-                className="w-full border-2 border-black rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-dl-red bg-white">
-                <option value="">— Unknown</option>
-                {TIERS.map(t => <option key={t}>{t}</option>)}
-              </select>
-            </div>
+            {dealType === 'Recurring' ? (
+              <div>
+                <label className="block text-sm font-bold mb-1">Tier</label>
+                <select value={tier} onChange={e => setTier(e.target.value)}
+                  className="w-full border-2 border-black rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-dl-red bg-white">
+                  <option value="">— Unknown</option>
+                  {RECURRING_TIERS.map(t => <option key={t}>{t}</option>)}
+                  <option>Custom</option>
+                </select>
+              </div>
+            ) : <div />}
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold mb-1">Deal Type</label>
+            <DealTypePicker value={dealType} onChange={setDealType} dark />
           </div>
 
           <div>
@@ -417,28 +514,43 @@ function EditSheet({ sponsor, packages, onClose, onSave, author }) {
               className="w-full border-2 border-black rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-dl-red" />
           </div>
 
-          <div>
-            <label className="block text-sm font-bold mb-1">Monthly Value ($)</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 font-bold">$</span>
-              <input type="number" min="0" value={monthlyValue} onChange={e => setMonthlyValue(e.target.value)}
-                placeholder={tier === 'In-Kind' ? 'N/A — in-kind deal' : '0'}
-                className="w-full border-2 border-black rounded-lg pl-7 pr-3 py-2 text-sm focus:outline-none focus:border-dl-red" />
+          {dealType === 'Recurring' && (
+            <div>
+              <label className="block text-sm font-bold mb-1">Per Month ($)</label>
+              <DollarInput value={monthlyValue} onChange={setMonthlyValue} placeholder="0"
+                className="border-2 border-black rounded-lg py-2" />
             </div>
-          </div>
+          )}
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-bold mb-1">Deal Start</label>
-              <input type="date" value={dealStart} onChange={e => setDealStart(e.target.value)}
-                className="w-full border-2 border-black rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-dl-red" />
+          {dealType === 'One-Time' && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-bold mb-1">Fee (total $)</label>
+                <DollarInput value={oneTimeFee} onChange={setOneTimeFee} placeholder="1500"
+                  className="border-2 border-black rounded-lg py-2" />
+              </div>
+              <div>
+                <label className="block text-sm font-bold mb-1">Episode Date</label>
+                <input type="date" value={episodeDate} onChange={e => setEpisodeDate(e.target.value)}
+                  className="w-full border-2 border-black rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-dl-red" />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-bold mb-1">Deal End</label>
-              <input type="date" value={dealEnd} onChange={e => setDealEnd(e.target.value)}
-                className="w-full border-2 border-black rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-dl-red" />
+          )}
+
+          {dealType !== 'One-Time' && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-bold mb-1">Deal Start</label>
+                <input type="date" value={dealStart} onChange={e => setDealStart(e.target.value)}
+                  className="w-full border-2 border-black rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-dl-red" />
+              </div>
+              <div>
+                <label className="block text-sm font-bold mb-1">Deal End</label>
+                <input type="date" value={dealEnd} onChange={e => setDealEnd(e.target.value)}
+                  className="w-full border-2 border-black rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-dl-red" />
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="pt-2 border-t border-gray-100">
             <label className="block text-sm font-bold mb-1">Invoice Status 🧾</label>
@@ -448,12 +560,11 @@ function EditSheet({ sponsor, packages, onClose, onSave, author }) {
             </select>
           </div>
 
-          {packages?.length > 0 && (
+          {dealType === 'One-Time' && spotlightPackages.length > 0 && (
             <div>
-              <label className="block text-sm font-bold mb-1">Featured Episode / One-Off Package</label>
-              <p className="text-xs text-gray-400 mb-2">Link this if it's a one-off deal (Breeder Spotlight, etc.) rather than a monthly package.</p>
+              <label className="block text-sm font-bold mb-1">Package</label>
               <div className="space-y-1.5">
-                {packages.map(pkg => (
+                {spotlightPackages.map(pkg => (
                   <label key={pkg.id} className="flex items-center gap-2 text-sm border-2 border-gray-200 rounded-lg px-3 py-2 cursor-pointer">
                     <input type="checkbox" checked={packageIds.includes(pkg.id)} onChange={() => togglePackage(pkg.id)} />
                     <span>{pkg.name}</span>
@@ -496,7 +607,10 @@ function EditSheet({ sponsor, packages, onClose, onSave, author }) {
 // ── Sponsor card ──────────────────────────────────────────────────
 function SponsorCard({ sponsor, packagesById, onTap }) {
   const tierInfo = TIER_DETAILS[sponsor.tier]
-  const effectiveStatus = sponsor.status ?? 'Lead'
+  const effectiveStatus = statusOf(sponsor)
+  const dealType = dealTypeOf(sponsor)
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' })
+  const notStarted = dealType !== 'One-Time' && sponsor.dealStart && sponsor.dealStart > today
   const statusStyle = STATUS_COLORS[effectiveStatus] ?? 'bg-gray-100 text-gray-600'
   const isActive = effectiveStatus === 'Closed Won'
   const isLost = effectiveStatus === 'Closed Lost'
@@ -527,10 +641,15 @@ function SponsorCard({ sponsor, packagesById, onTap }) {
               {name}
             </span>
           ))}
-          {sponsor.monthlyValue != null && (
+          {dealType === 'Recurring' && sponsor.monthlyValue != null && (
             <span className="text-xs text-gray-500 font-medium">{formatCurrency(sponsor.monthlyValue)}/mo</span>
           )}
-          {isActive && (
+          {dealType === 'One-Time' && (
+            sponsor.oneTimeFee != null
+              ? <span className="text-xs text-gray-500 font-medium">{formatCurrency(sponsor.oneTimeFee)} one-time</span>
+              : isActive && <span className="text-xs font-bold text-yellow-700">$ amount needed</span>
+          )}
+          {isActive && dealType !== 'In-Kind' && (
             <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${INVOICE_COLORS[sponsor.invoiceStatus] ?? INVOICE_COLORS['Not Invoiced']}`}>
               🧾 {sponsor.invoiceStatus ?? 'Not Invoiced'}
             </span>
@@ -540,7 +659,13 @@ function SponsorCard({ sponsor, packagesById, onTap }) {
           {sponsor.contactName && <p className="text-xs text-gray-400">👤 {sponsor.contactName}</p>}
           {sponsor.flaggedBy && <p className="text-xs text-gray-400">· via {sponsor.flaggedBy}</p>}
         </div>
-        {isActive && sponsor.dealEnd && <p className="text-xs text-green-600 font-medium mt-0.5">Deal ends {formatDate(sponsor.dealEnd)}</p>}
+        {dealType === 'One-Time' && sponsor.episodeDate && (
+          <p className="text-xs text-green-600 font-medium mt-0.5">🎙️ Episode {formatDate(sponsor.episodeDate)}</p>
+        )}
+        {isActive && notStarted && <p className="text-xs text-green-600 font-medium mt-0.5">Starts {formatDate(sponsor.dealStart)}</p>}
+        {isActive && dealType !== 'One-Time' && !notStarted && sponsor.dealEnd && (
+          <p className="text-xs text-green-600 font-medium mt-0.5">Deal ends {formatDate(sponsor.dealEnd)}</p>
+        )}
       </div>
       <div className="flex flex-col items-end gap-1 flex-shrink-0">
         <div className="flex items-center gap-1 text-gray-300 group-hover:text-gray-600 transition-colors">
@@ -671,28 +796,24 @@ export default function LeadsClient() {
   const interested = (sponsors ?? []).filter(s => !s.archived && s.status === 'Interested (Unconfirmed)')
   const archived = (sponsors ?? []).filter(s => s.archived)
 
-  const packageSponsors = live.filter(s => !isFeatured(s))
-  const featuredSponsors = live.filter(isFeatured)
+  const packageSponsors = live.filter(s => dealTypeOf(s) !== 'One-Time')
+  const featuredSponsors = live.filter(s => dealTypeOf(s) === 'One-Time')
 
   const byStatus = PIPELINE_STATUSES.reduce((acc, s) => {
-    acc[s] = packageSponsors.filter(sp => (sp.status ?? 'Lead') === s)
+    acc[s] = packageSponsors.filter(sp => statusOf(sp) === s)
     return acc
   }, {})
   const featuredByStatus = PIPELINE_STATUSES.reduce((acc, s) => {
-    acc[s] = featuredSponsors.filter(sp => (sp.status ?? 'Lead') === s)
+    acc[s] = featuredSponsors.filter(sp => statusOf(sp) === s)
     return acc
   }, {})
 
-  const activeSponsors = [...byStatus['Closed Won'], ...featuredByStatus['Closed Won']]
-  const totalMRR = activeSponsors.reduce((sum, s) => sum + (s.monthlyValue ?? 0), 0)
-  const pipeline = packageSponsors.filter(s => s.status !== 'Closed Lost' && s.status !== 'Closed Won').length
-    + featuredSponsors.filter(s => s.status !== 'Closed Lost' && s.status !== 'Closed Won').length
-  const invoicesPending = activeSponsors.filter(s => (s.invoiceStatus ?? 'Not Invoiced') !== 'Paid').length
+  const summary = summarizeSponsors(sponsors ?? [])
   const existingNames = (sponsors ?? []).map(s => s.companyName)
 
   return (
     <>
-      {showAdd && <AddDrawer onClose={() => setShowAdd(false)} onSaved={handleSaved} defaultUser={user} existingNames={existingNames} />}
+      {showAdd && <AddDrawer onClose={() => setShowAdd(false)} onSaved={handleSaved} defaultUser={user} existingNames={existingNames} packages={packages} />}
       {selected && <EditSheet sponsor={selected} packages={packages} onClose={() => setSelected(null)} onSave={handleSave} author={user} />}
 
       <main className="pb-20 min-h-screen bg-white">
@@ -704,11 +825,11 @@ export default function LeadsClient() {
               <h1 className="text-2xl font-bold">Sponsors 💰</h1>
               {sponsors && (
                 <p className="text-sm text-gray-500 mt-0.5">
-                  {activeSponsors.length > 0
-                    ? `${activeSponsors.length} active · ${formatCurrency(totalMRR)}/mo · ${pipeline} in pipeline`
-                    : pipeline > 0 ? `${pipeline} in pipeline — keep pushing!` : 'Start building your pipeline 👇'}
-                  {invoicesPending > 0 && (
-                    <span className="text-dl-red font-bold"> · {invoicesPending} invoice{invoicesPending > 1 ? 's' : ''} pending</span>
+                  {summary.activeCount > 0
+                    ? `${formatCurrency(summary.recurringMonthly)}/mo recurring · ${formatCurrency(summary.oneTimeTotal)} one-time in ${summary.year} · ${summary.pipeline} in pipeline`
+                    : summary.pipeline > 0 ? `${summary.pipeline} in pipeline — keep pushing!` : 'Start building your pipeline 👇'}
+                  {summary.invoicesPending > 0 && (
+                    <span className="text-dl-red font-bold"> · {summary.invoicesPending} invoice{summary.invoicesPending > 1 ? 's' : ''} pending</span>
                   )}
                 </p>
               )}
@@ -751,14 +872,14 @@ export default function LeadsClient() {
 
           {!loading && !error && sponsors && sponsors.length > 0 && (
             <div>
-              <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wide mb-3">Package Sponsors</h2>
+              <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wide mb-3">🔁 Monthly Partners</h2>
               {PIPELINE_STATUSES.map(status => (
                 <StatusSection key={status} status={status} sponsors={byStatus[status]} packagesById={packagesById} onTap={setSelected} />
               ))}
 
               {featuredSponsors.length > 0 && (
                 <>
-                  <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wide mb-3 mt-2">Featured Episodes</h2>
+                  <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wide mb-3 mt-2">🎙️ One-Time Episodes</h2>
                   {PIPELINE_STATUSES.map(status => (
                     <StatusSection key={status} status={status} sponsors={featuredByStatus[status]} packagesById={packagesById} onTap={setSelected} defaultCollapsed={false} />
                   ))}

@@ -1,45 +1,21 @@
 export const dynamic = 'force-dynamic'
 
 import { notion, DB, extractTitle, extractDate } from '@/lib/notion-drench'
+import { transistorFetch, fmtDate, getShowId, LAUNCH_DATE } from '@/lib/transistor'
+import { toSponsor, summarizeSponsors } from '@/lib/sponsors'
 import DashboardClient from './DashboardClient'
 
-const TRANSISTOR_BASE = 'https://api.transistor.fm/v1'
-
-function fmtDate(d) {
-  const dd = String(d.getDate()).padStart(2, '0')
-  const mm = String(d.getMonth() + 1).padStart(2, '0')
-  return `${dd}-${mm}-${d.getFullYear()}`
-}
-
-async function transistorFetch(path) {
-  const res = await fetch(`${TRANSISTOR_BASE}${path}`, {
-    headers: { 'x-api-key': process.env.TRANSISTOR_API_KEY },
-    next: { revalidate: 3600 },
-  })
-  if (!res.ok) throw new Error(`Transistor ${res.status}`)
-  return res.json()
-}
-
 async function getTransistorStats() {
-  const apiKey = process.env.TRANSISTOR_API_KEY
-  const slug = process.env.TRANSISTOR_SHOW_ID
-  if (!apiKey || !slug) return null
-
   try {
-    const showsData = await transistorFetch('/shows')
-    const show = (showsData?.data ?? []).find(
-      s => s.attributes?.slug === slug || String(s.id) === slug
-    )
-    if (!show) return null
-    const showId = show.id
+    const showId = await getShowId()
+    if (!showId) return null
 
     const now = new Date()
     const weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000)
-    const launchDate = new Date('2026-04-01')
 
     const [weekData, allTimeData, episodesData] = await Promise.all([
       transistorFetch(`/analytics/${showId}?start_date=${fmtDate(weekAgo)}&end_date=${fmtDate(now)}`),
-      transistorFetch(`/analytics/${showId}?start_date=${fmtDate(launchDate)}&end_date=${fmtDate(now)}`),
+      transistorFetch(`/analytics/${showId}?start_date=${fmtDate(LAUNCH_DATE)}&end_date=${fmtDate(now)}`),
       transistorFetch(`/episodes?show_id=${showId}&status=published&pagination[per]=100`),
     ])
 
@@ -60,28 +36,7 @@ async function getSponsorSummary() {
   if (!DB.SPONSORS) return null
   try {
     const response = await notion.databases.query({ database_id: DB.SPONSORS, page_size: 100 })
-    let mrr = 0, activeCount = 0, invoicesPending = 0, pipeline = 0, featuredBooked = 0
-
-    for (const page of response.results) {
-      const status = page.properties['Status']?.select?.name ?? 'Lead'
-      const archived = page.properties['Archived']?.checkbox ?? false
-      if (archived || status === 'Interested (Unconfirmed)') continue
-
-      const monthlyValue = page.properties['Monthly Value']?.number ?? 0
-      const invoiceStatus = page.properties['Invoice Status']?.select?.name ?? 'Not Invoiced'
-      const isFeatured = (page.properties['Sponsorship Package']?.relation?.length ?? 0) > 0
-
-      if (status === 'Closed Won') {
-        activeCount++
-        mrr += monthlyValue
-        if (invoiceStatus !== 'Paid') invoicesPending++
-        if (isFeatured) featuredBooked++
-      } else if (status !== 'Closed Lost') {
-        pipeline++
-      }
-    }
-
-    return { activeCount, mrr, invoicesPending, pipeline, featuredBooked }
+    return summarizeSponsors(response.results.map(toSponsor))
   } catch (e) {
     console.error('[SponsorSummary]', e.message)
     return null

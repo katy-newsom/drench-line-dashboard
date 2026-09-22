@@ -1,28 +1,6 @@
 import { NextResponse } from 'next/server'
 import { notion, DB } from '@/lib/notion-drench'
-
-function getTitle(page) {
-  const prop = Object.values(page.properties).find(p => p.type === 'title')
-  return prop?.title?.[0]?.plain_text ?? ''
-}
-function getText(page, name) {
-  return page.properties[name]?.rich_text?.map(t => t.plain_text).join('') ?? ''
-}
-function getSelect(page, name) {
-  return page.properties[name]?.select?.name ?? null
-}
-function getDate(page, name) {
-  return page.properties[name]?.date?.start ?? null
-}
-function getNumber(page, name) {
-  return page.properties[name]?.number ?? null
-}
-function getCheckbox(page, name) {
-  return page.properties[name]?.checkbox ?? false
-}
-function getRelationIds(page, name) {
-  return page.properties[name]?.relation?.map(r => r.id) ?? []
-}
+import { toSponsor } from '@/lib/sponsors'
 
 export async function GET() {
   if (!DB.SPONSORS) {
@@ -35,23 +13,7 @@ export async function GET() {
       page_size: 100,
     })
 
-    const sponsors = response.results.map(page => ({
-      id: page.id,
-      companyName: getTitle(page),
-      contactName: getText(page, 'Contact Name'),
-      status: getSelect(page, 'Status'),
-      tier: getSelect(page, 'Tier'),
-      monthlyValue: getNumber(page, 'Monthly Value'),
-      lastContactDate: getDate(page, 'Last Contact Date'),
-      dealStart: getDate(page, 'Deal Start'),
-      dealEnd: getDate(page, 'Deal End'),
-      notes: getText(page, 'Notes'),
-      flaggedBy: getText(page, 'Flagged By'),
-      invoiceStatus: getSelect(page, 'Invoice Status') ?? 'Not Invoiced',
-      exclusiveCategory: getCheckbox(page, 'Exclusive Category'),
-      archived: getCheckbox(page, 'Archived'),
-      packageIds: getRelationIds(page, 'Sponsorship Package'),
-    }))
+    const sponsors = response.results.map(toSponsor)
 
     return NextResponse.json({ sponsors })
   } catch (err) {
@@ -66,7 +28,7 @@ export async function POST(req) {
   }
   try {
     const body = await req.json()
-    const { companyName, contactName, notes, flaggedBy, tier, monthlyValue, status, invoiceStatus, exclusiveCategory, packageIds } = body
+    const { companyName, contactName, notes, flaggedBy, tier, dealType, monthlyValue, oneTimeFee, episodeDate, status, invoiceStatus, exclusiveCategory, packageIds } = body
 
     if (!companyName) {
       return NextResponse.json({ error: 'companyName is required' }, { status: 400 })
@@ -81,7 +43,10 @@ export async function POST(req) {
         ...(notes?.trim() && { Notes: { rich_text: [{ text: { content: notes.trim() } }] } }),
         ...(flaggedBy?.trim() && { 'Flagged By': { rich_text: [{ text: { content: flaggedBy.trim() } }] } }),
         ...(tier && { Tier: { select: { name: tier } } }),
+        ...(dealType && { 'Deal Type': { select: { name: dealType } } }),
         ...(monthlyValue != null && monthlyValue !== '' && { 'Monthly Value': { number: parseFloat(monthlyValue) } }),
+        ...(oneTimeFee != null && oneTimeFee !== '' && { 'One-Time Fee': { number: parseFloat(oneTimeFee) } }),
+        ...(episodeDate && { 'Episode Date': { date: { start: episodeDate } } }),
         'Invoice Status': { select: { name: invoiceStatus || 'Not Invoiced' } },
         ...(exclusiveCategory != null && { 'Exclusive Category': { checkbox: !!exclusiveCategory } }),
         ...(packageIds?.length > 0 && { 'Sponsorship Package': { relation: packageIds.map(id => ({ id })) } }),
@@ -102,17 +67,20 @@ export async function PATCH(req) {
   }
   try {
     const body = await req.json()
-    const { id, status, tier, monthlyValue, contactName, notes, dealStart, dealEnd, invoiceStatus, exclusiveCategory, archived, packageIds } = body
+    const { id, status, tier, dealType, monthlyValue, oneTimeFee, episodeDate, contactName, notes, dealStart, dealEnd, invoiceStatus, exclusiveCategory, archived, packageIds } = body
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
     const properties = {}
     if (status) properties['Status'] = { select: { name: status } }
-    if (tier) properties['Tier'] = { select: { name: tier } }
-    if (monthlyValue != null) properties['Monthly Value'] = { number: parseFloat(monthlyValue) || null }
+    if (tier !== undefined) properties['Tier'] = tier ? { select: { name: tier } } : { select: null }
+    if (dealType) properties['Deal Type'] = { select: { name: dealType } }
+    if (monthlyValue !== undefined) properties['Monthly Value'] = { number: monthlyValue === null || monthlyValue === '' ? null : parseFloat(monthlyValue) }
+    if (oneTimeFee !== undefined) properties['One-Time Fee'] = { number: oneTimeFee === null || oneTimeFee === '' ? null : parseFloat(oneTimeFee) }
+    if (episodeDate !== undefined) properties['Episode Date'] = episodeDate ? { date: { start: episodeDate } } : { date: null }
     if (contactName != null) properties['Contact Name'] = { rich_text: [{ text: { content: contactName } }] }
     if (notes != null) properties['Notes'] = { rich_text: [{ text: { content: notes } }] }
-    if (dealStart != null) properties['Deal Start'] = dealStart ? { date: { start: dealStart } } : { date: null }
-    if (dealEnd != null) properties['Deal End'] = dealEnd ? { date: { start: dealEnd } } : { date: null }
+    if (dealStart !== undefined) properties['Deal Start'] = dealStart ? { date: { start: dealStart } } : { date: null }
+    if (dealEnd !== undefined) properties['Deal End'] = dealEnd ? { date: { start: dealEnd } } : { date: null }
     if (invoiceStatus) properties['Invoice Status'] = { select: { name: invoiceStatus } }
     if (exclusiveCategory != null) properties['Exclusive Category'] = { checkbox: !!exclusiveCategory }
     if (archived != null) properties['Archived'] = { checkbox: !!archived }

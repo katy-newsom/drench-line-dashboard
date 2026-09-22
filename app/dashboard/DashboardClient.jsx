@@ -25,25 +25,60 @@ function SponsorshipCard({ summary }) {
       </div>
       {summary ? (
         <>
-          <div className="flex gap-6">
-            <StatPill label="Active" value={summary.activeCount} />
-            <div className="w-px bg-gray-700 self-stretch" />
-            <StatPill label="MRR" value={formatCurrency(summary.mrr)} />
-            <div className="w-px bg-gray-700 self-stretch" />
-            <StatPill label="In pipeline" value={summary.pipeline} />
-          </div>
-          {summary.invoicesPending > 0 && (
-            <div className="mt-4 pt-4 border-t border-gray-700">
-              <p className="text-sm font-bold text-dl-red">
-                🧾 {summary.invoicesPending} invoice{summary.invoicesPending > 1 ? 's' : ''} pending
-              </p>
+          <div className="mb-4 pb-4 border-b border-gray-700">
+            <div className="text-4xl font-black text-white">{formatCurrency(summary.yearTotal)}</div>
+            <div className="text-xs font-bold text-gray-300 mt-0.5">{summary.year} total booked</div>
+            <div className="text-xs text-gray-500">
+              {formatCurrency(summary.recurringYearTotal)} monthly deals + {formatCurrency(summary.oneTimeTotal)} one-time
             </div>
+          </div>
+          <div className="flex gap-6">
+            <MoneyStat
+              value={formatCurrency(summary.recurringMonthly)}
+              suffix="/mo"
+              label="Monthly recurring"
+              detail={`${summary.recurringCount} partner${summary.recurringCount === 1 ? '' : 's'} · every month`}
+            />
+            <div className="w-px bg-gray-700 self-stretch" />
+            <MoneyStat
+              value={formatCurrency(summary.oneTimeTotal)}
+              label={`One-time · ${summary.year}`}
+              detail={`${summary.oneTimeCount} episode${summary.oneTimeCount === 1 ? '' : 's'} booked`}
+            />
+          </div>
+          <div className="mt-4 pt-4 border-t border-gray-700 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+            <span className="text-gray-300"><span className="font-bold text-white">{summary.pipeline}</span> in pipeline</span>
+            {summary.inKindCount > 0 && (
+              <span className="text-gray-300"><span className="font-bold text-white">{summary.inKindCount}</span> in-kind</span>
+            )}
+            {summary.invoicesPending > 0 && (
+              <span className="font-bold text-dl-red">
+                🧾 {summary.invoicesPending} invoice{summary.invoicesPending > 1 ? 's' : ''} pending
+              </span>
+            )}
+          </div>
+          {summary.oneTimeMissingFee > 0 && (
+            <p className="text-xs text-yellow-400 mt-2">
+              ⚠️ {summary.oneTimeMissingFee} one-time deal{summary.oneTimeMissingFee > 1 ? 's' : ''} missing a $ amount
+            </p>
           )}
         </>
       ) : (
         <p className="text-sm text-gray-400">No sponsorship data yet</p>
       )}
     </Link>
+  )
+}
+
+function MoneyStat({ value, suffix, label, detail }) {
+  return (
+    <div className="flex-1 min-w-0">
+      <div className="text-3xl font-black text-white">
+        {value ?? '—'}{suffix && <span className="text-base font-bold text-gray-400">{suffix}</span>}
+      </div>
+      <div className="text-xs font-bold text-gray-300 mt-0.5">{label}</div>
+      <div className="text-xs text-gray-500">{detail}</div>
+    </div>
   )
 }
 

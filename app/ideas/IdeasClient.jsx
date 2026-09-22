@@ -1,5 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import { useUser } from '@/app/context/UserContext'
+import CommentThread from '@/app/components/drench/CommentThread'
 
 const FILTERS = ['All', 'Idea', 'Planned', 'Used']
 const STATUSES = ['Idea', 'Planned', 'Used']
@@ -11,6 +13,7 @@ const STATUS_COLORS = {
 }
 
 function IdeaRow({ idea, onUpdate }) {
+  const { user } = useUser()
   const [expanded, setExpanded] = useState(false)
   const [title, setTitle] = useState(idea.title)
   const [status, setStatus] = useState(idea.status ?? 'Idea')
@@ -81,6 +84,9 @@ function IdeaRow({ idea, onUpdate }) {
             />
           </div>
           {saving && <p className="text-xs text-gray-400">Saving...</p>}
+
+          {/* Team comment thread */}
+          <CommentThread pageId={idea.id} author={user} />
         </div>
       )}
     </div>
