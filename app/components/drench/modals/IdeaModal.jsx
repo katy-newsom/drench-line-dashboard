@@ -43,7 +43,7 @@ export default function IdeaModal({ user, onClose }) {
   }
 
   return (
-    <ModalShell title="💡 Submit Idea" onClose={onClose} success={success}>
+    <ModalShell title="Submit idea" onClose={onClose} success={success}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-bold mb-1">Idea Title *</label>
@@ -99,11 +99,10 @@ export default function IdeaModal({ user, onClose }) {
 export function ModalShell({ title, onClose, success, children }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60">
-      <div className={`w-full max-w-lg bg-white rounded-t-2xl p-6 animate-slide-up transition-colors ${success ? 'bg-dl-red' : ''}`}>
+      <div className="w-full max-w-lg bg-card rounded-t-xl p-6 animate-slide-up">
         {success ? (
-          <div className="text-center py-8 text-white">
-            <div className="text-4xl mb-2">✅</div>
-            <div className="text-xl font-bold">Submitted!</div>
+          <div className="text-center py-8">
+            <div className="font-display text-2xl uppercase">Submitted</div>
           </div>
         ) : (
           <>

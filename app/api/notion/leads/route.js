@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { notion, DB } from '@/lib/notion-drench'
+import { notion, DB, queryAllDatabase } from '@/lib/notion-drench'
 import { toSponsor } from '@/lib/sponsors'
 
 export async function GET() {
@@ -7,13 +7,14 @@ export async function GET() {
     return NextResponse.json({ error: 'NOTION_SPONSORS_DB_ID not configured' }, { status: 503 })
   }
   try {
-    const response = await notion.databases.query({
+    // Same sort as before, but every page. A single page_size of 100 used to
+    // disagree with the old home-screen query, which asked for a different 100.
+    const pages = await queryAllDatabase({
       database_id: DB.SPONSORS,
       sorts: [{ timestamp: 'created_time', direction: 'descending' }],
-      page_size: 100,
     })
 
-    const sponsors = response.results.map(toSponsor)
+    const sponsors = pages.map(toSponsor)
 
     return NextResponse.json({ sponsors })
   } catch (err) {

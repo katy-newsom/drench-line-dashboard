@@ -4,6 +4,13 @@ const nextConfig = {
   images: {
     domains: ['lh3.googleusercontent.com', 'drive.google.com'],
   },
+  async redirects() {
+    return [
+      { source: '/', destination: '/leads', permanent: false },
+      { source: '/dashboard', destination: '/leads', permanent: false },
+      { source: '/analytics', destination: '/downloads', permanent: false },
+    ]
+  },
 }
 
 module.exports = nextConfig

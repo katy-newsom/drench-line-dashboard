@@ -7,20 +7,40 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        paper: '#F4F2ED',
+        card: '#FFFFFF',
+        ink: {
+          DEFAULT: '#111111',
+          2: '#4A4843',
+        },
+        muted: '#827E75',
+        line: {
+          DEFAULT: '#E2DED4',
+          strong: '#C9C4B8',
+        },
+        accent: '#CC0000',
+        good: '#0B7A35',
+        bad: '#B42318',
+        night: '#0F0F0F',
         dl: {
-          black: '#000000',
+          black: '#111111',
           white: '#FFFFFF',
           red: '#CC0000',
           'red-dark': '#990000',
-          'red-light': '#FF1111',
+          'red-light': '#CC0000',
         },
       },
       fontFamily: {
-        sans: ['var(--font-archivo)', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
-        archivo: ['var(--font-archivo)', 'sans-serif'],
+        sans: ['var(--font-archivo-narrow)', 'Arial Narrow', 'system-ui', 'sans-serif'],
+        display: ['var(--font-archivo-black)', 'Arial Black', 'sans-serif'],
+      },
+      borderRadius: {
+        sm: '4px',
+        md: '6px',
+        lg: '8px',
+        xl: '12px',
       },
       animation: {
-        'pulse-fast': 'pulse 0.8s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'fade-in': 'fadeIn 0.2s ease-out',
         'slide-up': 'slideUp 0.3s ease-out',
         expand: 'expand 0.2s ease-out',

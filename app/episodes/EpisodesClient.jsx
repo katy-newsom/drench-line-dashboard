@@ -1,36 +1,9 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import confetti from 'canvas-confetti'
 import { useUser } from '@/app/context/UserContext'
 import CommentThread from '@/app/components/drench/CommentThread'
 
 const STATUSES = ['Idea', 'Planned', 'Recorded', 'Editing', 'Scheduled', 'Live']
-
-const STATUS_COLORS = {
-  Idea: 'bg-gray-200 text-gray-700',
-  Planned: 'bg-blue-100 text-blue-800',
-  Recorded: 'bg-yellow-100 text-yellow-800',
-  Editing: 'bg-orange-100 text-orange-800',
-  Scheduled: 'bg-purple-100 text-purple-800',
-  Live: 'bg-dl-red text-white',
-}
-
-const STATUS_EMOJI = {
-  Idea: '💡',
-  Planned: '📋',
-  Recorded: '🎙️',
-  Editing: '✂️',
-  Scheduled: '📅',
-  Live: '🔴',
-}
-
-function fireConfetti() {
-  confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#CC0000', '#000000', '#ffffff', '#FF4444'] })
-  setTimeout(() => {
-    confetti({ particleCount: 80, angle: 60, spread: 55, origin: { x: 0, y: 0.6 }, colors: ['#CC0000', '#000000', '#ffffff'] })
-    confetti({ particleCount: 80, angle: 120, spread: 55, origin: { x: 1, y: 0.6 }, colors: ['#CC0000', '#000000', '#ffffff'] })
-  }, 300)
-}
 
 function formatDate(dateStr) {
   if (!dateStr) return null
@@ -47,12 +20,9 @@ function EpisodeEditSheet({ episode, onClose, onSave }) {
   const [releaseDate, setReleaseDate] = useState(episode.releaseDate ?? '')
   const [notes, setNotes] = useState(episode.notes ?? '')
   const [saving, setSaving] = useState(false)
-  const [toast, setToast] = useState(null)
 
   async function save() {
     setSaving(true)
-    const wasLive = episode.status === 'Live'
-    const goingLive = status === 'Live' && !wasLive
 
     await fetch('/api/notion/episodes', {
       method: 'PATCH',
@@ -69,24 +39,14 @@ function EpisodeEditSheet({ episode, onClose, onSave }) {
     })
 
     setSaving(false)
-    if (goingLive) {
-      fireConfetti()
-      setToast("🎉 It's live!")
-      setTimeout(() => setToast(null), 3000)
-    }
     onSave({ ...episode, title, status, episodeNumber: episodeNumber !== '' ? Number(episodeNumber) : null, recordingDate, releaseDate, notes })
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="w-full max-w-lg bg-white rounded-t-2xl p-6 max-h-[90vh] overflow-y-auto">
-        {toast && (
-          <div className="fixed top-1/3 left-1/2 -translate-x-1/2 bg-black text-white font-bold px-6 py-3 rounded-full shadow-xl z-50 text-lg">
-            {toast}
-          </div>
-        )}
+      <div className="w-full max-w-lg bg-card rounded-t-xl p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-xl font-bold">Edit Episode</h2>
+          <h2 className="font-display text-2xl uppercase leading-none">Edit episode</h2>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100">✕</button>
         </div>
 
@@ -166,16 +126,15 @@ function NewEpisodeModal({ onClose, onCreated }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60">
-      <div className={`w-full max-w-lg rounded-t-2xl p-6 transition-colors ${success ? 'bg-dl-red' : 'bg-white'}`}>
+      <div className="w-full max-w-lg rounded-t-xl p-6 bg-card">
         {success ? (
-          <div className="text-center py-8 text-white">
-            <div className="text-4xl mb-2">✅</div>
-            <div className="text-xl font-bold">Episode created!</div>
+          <div className="text-center py-8">
+            <p className="font-display text-2xl uppercase">Episode created</p>
           </div>
         ) : (
           <>
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-xl font-bold">New Episode</h2>
+              <h2 className="font-display text-2xl uppercase leading-none">New episode</h2>
               <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100">✕</button>
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -195,29 +154,29 @@ function NewEpisodeModal({ onClose, onCreated }) {
 }
 
 function EpisodeRow({ ep, onTap }) {
-  const statusStyle = STATUS_COLORS[ep.status] ?? 'bg-gray-200 text-gray-700'
+  const live = ep.status === 'Live'
 
   return (
     <button
       onClick={() => onTap(ep)}
-      className="w-full text-left bg-white border-2 border-gray-100 rounded-2xl p-4 flex items-center gap-3 active:scale-[0.98] transition-transform hover:border-black group"
+      className="w-full text-left bg-card border border-line rounded-xl p-4 flex items-center gap-3"
     >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           {ep.episodeNumber != null && (
-            <span className="text-xs font-black text-gray-400">Ep. {ep.episodeNumber}</span>
+            <span className="text-xs font-semibold text-muted">Ep. {ep.episodeNumber}</span>
           )}
-          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${statusStyle}`}>
-            {STATUS_EMOJI[ep.status]} {ep.status}
+          <span className={`text-xs font-semibold ${live ? 'text-accent' : 'text-ink-2'}`}>
+            {ep.status}
           </span>
         </div>
-        <p className="font-bold text-base leading-snug mt-1">{ep.title}</p>
+        <p className="font-semibold text-base leading-snug mt-1">{ep.title}</p>
         <div className="flex gap-3 mt-1 flex-wrap">
           {ep.recordingDate && (
-            <span className="text-xs text-gray-400">🎙️ Record {formatDate(ep.recordingDate)}</span>
+            <span className="text-xs text-muted">Record {formatDate(ep.recordingDate)}</span>
           )}
           {ep.releaseDate && (
-            <span className="text-xs text-gray-400">📅 Release {formatDate(ep.releaseDate)}</span>
+            <span className="text-xs text-muted">Release {formatDate(ep.releaseDate)}</span>
           )}
         </div>
       </div>
@@ -242,8 +201,8 @@ function StatusSection({ status, episodes, onTap }) {
         onClick={() => setCollapsed(v => !v)}
         className="flex items-center gap-2 mb-3 w-full text-left"
       >
-        <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${STATUS_COLORS[status]}`}>
-          {STATUS_EMOJI[status]} {status}
+        <span className={`text-xs font-semibold ${status === 'Live' ? 'text-accent' : 'text-ink-2'}`}>
+          {status}
         </span>
         <span className="text-xs text-gray-400 font-medium">{episodes.length} episode{episodes.length !== 1 ? 's' : ''}</span>
         <svg className={`w-3.5 h-3.5 text-gray-400 ml-auto transition-transform ${collapsed ? '' : 'rotate-180'}`}
@@ -306,13 +265,16 @@ export default function EpisodesClient() {
   const activeCount = episodes.filter(e => e.status !== 'Live').length
 
   return (
-    <main className="pb-20 min-h-screen bg-white">
-      <div className="pt-12 px-4 max-w-lg mx-auto">
-        <div className="flex items-center justify-between mb-1">
-          <h1 className="text-2xl font-bold">Episodes</h1>
+    <main className="pb-24 min-h-screen">
+      <div className="pt-16 px-4 max-w-lg mx-auto">
+        <div className="flex items-end justify-between mb-1 gap-3">
+          <div>
+            <p className="eyebrow mb-2">Show</p>
+            <h1 className="font-display text-[2rem] uppercase leading-none">Episodes</h1>
+          </div>
           <button onClick={() => setShowNew(true)}
-            className="bg-black text-white text-sm font-bold px-4 py-2 rounded-full active:scale-95 transition-transform">
-            + New Episode
+            className="bg-ink text-white text-sm font-semibold px-4 py-2 rounded-lg">
+            New
           </button>
         </div>
         {activeCount > 0 && (
@@ -336,10 +298,9 @@ export default function EpisodesClient() {
               />
             ))}
             {episodes.length === 0 && (
-              <div className="border-2 border-dashed border-gray-200 rounded-2xl p-10 text-center">
-                <div className="text-3xl mb-2">🎙️</div>
-                <p className="font-bold text-gray-700 mb-1">No episodes yet</p>
-                <p className="text-xs text-gray-400">Tap "+ New Episode" to add your first one</p>
+              <div className="border border-dashed border-line-strong rounded-xl p-10 text-center">
+                <p className="font-semibold text-ink mb-1">No episodes yet</p>
+                <p className="text-xs text-muted">Tap New to add the first one.</p>
               </div>
             )}
           </div>

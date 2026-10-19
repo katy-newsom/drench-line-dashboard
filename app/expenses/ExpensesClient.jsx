@@ -14,15 +14,6 @@ function formatCurrency(n) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n)
 }
 
-const CATEGORY_COLORS = {
-  Equipment:  'bg-blue-50 text-blue-700',
-  Software:   'bg-purple-50 text-purple-700',
-  Marketing:  'bg-pink-50 text-pink-700',
-  Travel:     'bg-yellow-50 text-yellow-800',
-  Studio:     'bg-orange-50 text-orange-700',
-  Editing:    'bg-teal-50 text-teal-700',
-  Other:      'bg-gray-100 text-gray-600',
-}
 
 function AddDrawer({ onClose, onSaved, defaultSubmitter }) {
   const [form, setForm] = useState({
@@ -63,7 +54,7 @@ function AddDrawer({ onClose, onSaved, defaultSubmitter }) {
     <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/40">
       <div className="bg-white rounded-t-3xl px-5 pt-5 pb-8 max-w-lg mx-auto w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold">Log an Expense 💸</h2>
+          <h2 className="font-display text-2xl uppercase leading-none">Log an expense</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-black text-xl leading-none">✕</button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -121,20 +112,19 @@ function AddDrawer({ onClose, onSaved, defaultSubmitter }) {
 }
 
 function ExpenseRow({ item }) {
-  const catStyle = CATEGORY_COLORS[item.category] ?? 'bg-gray-100 text-gray-600'
   return (
-    <div className="flex items-center gap-3 py-3.5 border-b border-gray-100 last:border-0">
+    <div className="flex items-center gap-3 py-3.5 border-b border-line last:border-0">
       <div className="flex-1 min-w-0">
-        <p className="font-semibold text-sm text-gray-900 leading-snug">{item.description}</p>
+        <p className="font-semibold text-sm text-ink leading-snug">{item.description}</p>
         <div className="flex gap-1.5 mt-1 flex-wrap items-center">
           {item.category && (
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${catStyle}`}>{item.category}</span>
+            <span className="text-xs font-semibold text-ink-2">{item.category}</span>
           )}
-          {item.date && <span className="text-xs text-gray-400">{formatDate(item.date)}</span>}
-          {item.submittedBy && <span className="text-xs text-gray-400">· {item.submittedBy}</span>}
+          {item.date && <span className="text-xs text-muted">{formatDate(item.date)}</span>}
+          {item.submittedBy && <span className="text-xs text-muted">· {item.submittedBy}</span>}
         </div>
       </div>
-      <span className="font-bold text-sm text-gray-900 flex-shrink-0">{formatCurrency(item.amount)}</span>
+      <span className="font-semibold text-sm text-ink flex-shrink-0 tabular-nums">{formatCurrency(item.amount)}</span>
     </div>
   )
 }
@@ -178,36 +168,31 @@ export default function ExpensesClient() {
     <>
       {showAdd && <AddDrawer onClose={() => setShowAdd(false)} onSaved={handleSaved} defaultSubmitter={user} />}
 
-      <main className="pb-20 min-h-screen bg-white">
-        <div className="max-w-lg mx-auto px-4 pt-12">
+      <main className="pb-24 min-h-screen">
+        <div className="max-w-lg mx-auto px-4 pt-16">
 
-          <div className="flex items-center justify-between mb-5">
+          <div className="flex items-end justify-between mb-5 gap-3">
             <div>
-              <h1 className="text-2xl font-bold">Expenses 💸</h1>
+              <p className="eyebrow mb-2">Money out</p>
+              <h1 className="font-display text-[2rem] uppercase leading-none">Expenses</h1>
               {expenses && (
-                <p className="text-sm text-gray-500 mt-0.5">
+                <p className="text-sm text-ink-2 mt-2">
                   {formatCurrency(grandTotal)} total · {expenses.length} item{expenses.length !== 1 ? 's' : ''}
                 </p>
               )}
             </div>
-            <div className="flex gap-2">
-              <button onClick={load} disabled={loading}
-                className="bg-gray-100 text-gray-700 text-xs font-bold px-3 py-2 rounded-full active:scale-95 transition-transform disabled:opacity-50">
-                {loading ? '…' : '↻'}
-              </button>
-              <button onClick={() => setShowAdd(true)}
-                className="bg-black text-white text-xs font-bold px-4 py-2 rounded-full active:scale-95 transition-transform">
-                + Log
-              </button>
-            </div>
+            <button onClick={() => setShowAdd(true)}
+              className="bg-ink text-white text-sm font-semibold px-4 py-2 rounded-lg">
+              Log
+            </button>
           </div>
 
           {/* Category filter */}
           <div className="flex gap-2 mb-5 overflow-x-auto pb-1 -mx-1 px-1">
             {categories.map(c => (
               <button key={c} onClick={() => setActiveCategory(c)}
-                className={`flex-shrink-0 text-xs font-bold px-3 py-2 rounded-full border-2 transition-colors ${
-                  activeCategory === c ? 'bg-black text-white border-black' : 'bg-white text-black border-gray-200'
+                className={`flex-shrink-0 text-xs font-semibold px-3 py-2 rounded-lg border ${
+                  activeCategory === c ? 'bg-ink text-white border-ink' : 'bg-card text-ink-2 border-line'
                 }`}>
                 {c}
               </button>
@@ -223,7 +208,7 @@ export default function ExpensesClient() {
           )}
 
           {loading && (
-            <div className="bg-white rounded-3xl shadow-sm px-4">
+            <div className="bg-card border border-line rounded-xl px-4">
               {[1, 2, 3, 4].map(i => (
                 <div key={i} className="flex gap-3 py-3.5 border-b border-gray-100 animate-pulse">
                   <div className="flex-1 space-y-2">
@@ -244,17 +229,16 @@ export default function ExpensesClient() {
           )}
 
           {!loading && !error && filtered.length === 0 && (
-            <div className="border-2 border-dashed border-gray-200 rounded-2xl p-10 text-center">
-              <div className="text-3xl mb-2">💸</div>
-              <p className="font-bold text-gray-700 mb-1">
+            <div className="border border-dashed border-line-strong rounded-xl p-10 text-center">
+              <p className="font-semibold text-ink mb-1">
                 {activeCategory === 'All' ? 'No expenses logged yet' : `No ${activeCategory} expenses`}
               </p>
-              <p className="text-xs text-gray-400">Tap "+ Log" to add one</p>
+              <p className="text-xs text-muted">Tap Log to add one.</p>
             </div>
           )}
 
           {!loading && !error && filtered.length > 0 && (
-            <div className="bg-white rounded-3xl shadow-sm px-4">
+            <div className="bg-card border border-line rounded-xl px-4">
               {filtered.map(item => <ExpenseRow key={item.id} item={item} />)}
             </div>
           )}

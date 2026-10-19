@@ -3,21 +3,6 @@ import { useState, useEffect, useCallback } from 'react'
 import { useUser } from '@/app/context/UserContext'
 import CommentThread from '@/app/components/drench/CommentThread'
 
-const STATUS_COLORS = {
-  'Drafting':         'bg-yellow-100 text-yellow-800',
-  'Internal Review':  'bg-gray-100 text-gray-600',
-  'Approved':         'bg-green-100 text-green-700',
-  'Scheduled':        'bg-blue-100 text-blue-700',
-  'Live':             'bg-emerald-100 text-emerald-700',
-}
-
-const TYPE_EMOJI = {
-  'Show Clip':             '🎙️',
-  'Educational Graphic':   '📚',
-  'Reel':                  '🎬',
-  'Quote / Motivational':  '💬',
-  'Product Demo':          '🛒',
-}
 
 function formatDate(dateStr) {
   if (!dateStr) return '—'
@@ -38,8 +23,7 @@ function formatMonth(dateStr) {
 // ── Single post card ──────────────────────────────────────────────
 function PostCard({ item, user }) {
   const [open, setOpen] = useState(false)
-  const statusStyle = STATUS_COLORS[item.status] ?? 'bg-gray-100 text-gray-600'
-  const typeEmoji = TYPE_EMOJI[item.contentType] ?? '📄'
+  const live = item.status === 'Live'
 
   return (
     <div className="border-b border-gray-100 last:border-0">
@@ -59,16 +43,16 @@ function PostCard({ item, user }) {
 
         {/* Title + badges */}
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-gray-900 text-sm leading-snug truncate">
-            {typeEmoji} {item.title}
+          <p className="font-semibold text-ink text-sm leading-snug truncate">
+            {item.title}
           </p>
           <div className="flex gap-1.5 mt-1 flex-wrap">
             {item.platform?.map(p => (
-              <span key={p} className="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full font-medium">
+              <span key={p} className="text-xs font-semibold text-ink-2">
                 {p}
               </span>
             ))}
-            <span className={`${statusStyle} text-xs px-2 py-0.5 rounded-full font-medium`}>
+            <span className={`text-xs font-semibold ${live ? 'text-accent' : 'text-muted'}`}>
               {item.status}
             </span>
           </div>
@@ -139,16 +123,19 @@ export default function SocialClient() {
   useEffect(() => { load() }, [load])
 
   return (
-    <main className="pb-20 min-h-screen bg-white">
-      <div className="max-w-lg mx-auto px-4 pt-12">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">Social 📱</h1>
+    <main className="pb-24 min-h-screen">
+      <div className="max-w-lg mx-auto px-4 pt-16">
+        <div className="flex items-end justify-between mb-6 gap-3">
+          <div>
+            <p className="eyebrow mb-2">Content</p>
+            <h1 className="font-display text-[2rem] uppercase leading-none">Social calendar</h1>
+          </div>
           <button
             onClick={load}
             disabled={loading}
-            className="bg-black text-white text-xs font-bold px-3 py-2 rounded-full active:scale-95 transition-transform disabled:opacity-50"
+            className="text-sm font-semibold text-ink-2 disabled:opacity-50"
           >
-            {loading ? '…' : '↻ Refresh'}
+            {loading ? 'Loading' : 'Reload'}
           </button>
         </div>
 
@@ -179,8 +166,7 @@ export default function SocialClient() {
 
         {!loading && !error && items?.length === 0 && (
           <div className="border-2 border-dashed border-gray-200 rounded-2xl p-10 text-center">
-            <div className="text-3xl mb-2">📱</div>
-            <p className="font-bold text-gray-700 mb-1">No posts yet</p>
+            <p className="font-semibold text-ink mb-1">No posts yet</p>
             <p className="text-xs text-gray-400">Add posts to your Notion content calendar with Clients = Drench Line</p>
           </div>
         )}

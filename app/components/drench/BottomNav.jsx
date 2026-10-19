@@ -4,100 +4,74 @@ import { usePathname } from 'next/navigation'
 
 const TABS = [
   {
-    href: '/dashboard',
-    label: 'Dashboard',
-    icon: (active) => (
-      <svg className="w-5 h-5" fill={active ? '#CC0000' : 'currentColor'} viewBox="0 0 24 24">
-        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-        <path fill="white" d="M9 22V12h6v10" />
-      </svg>
-    ),
-  },
-  {
     href: '/leads',
     label: 'Sponsors',
+    match: ['/leads'],
     icon: (active) => (
-      <svg className="w-5 h-5" fill="none" stroke={active ? '#CC0000' : 'currentColor'} strokeWidth="2" viewBox="0 0 24 24">
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
     ),
   },
   {
-    href: '/analytics',
-    label: 'Analytics',
+    href: '/downloads',
+    label: 'Downloads',
+    match: ['/downloads'],
     icon: (active) => (
-      <svg className="w-5 h-5" fill="none" stroke={active ? '#CC0000' : 'currentColor'} strokeWidth="2" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M18 20V10M12 20V4M6 20v-6" />
-      </svg>
-    ),
-  },
-  {
-    href: '/episodes',
-    label: 'Episodes',
-    icon: (active) => (
-      <svg className="w-5 h-5" fill="none" stroke={active ? '#CC0000' : 'currentColor'} strokeWidth="2" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="10" />
-        <polygon fill={active ? '#CC0000' : 'currentColor'} stroke="none" points="10,8 16,12 10,16" />
-      </svg>
-    ),
-  },
-  {
-    href: '/submissions',
-    label: 'Q&A',
-    icon: (active) => (
-      <svg className="w-5 h-5" fill="none" stroke={active ? '#CC0000' : 'currentColor'} strokeWidth="2" viewBox="0 0 24 24">
-        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" strokeLinecap="round" strokeLinejoin="round" />
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 19V5M4 19h16M8 16v-4M12 16V8M16 16v-6" />
       </svg>
     ),
   },
   {
     href: '/expenses',
     label: 'Expenses',
+    match: ['/expenses'],
     icon: (active) => (
-      <svg className="w-5 h-5" fill="none" stroke={active ? '#CC0000' : 'currentColor'} strokeWidth="2" viewBox="0 0 24 24">
-        <line x1="12" y1="1" x2="12" y2="23" />
-        <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" strokeLinecap="round" />
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 14l2 2 4-4M7 4h10a2 2 0 012 2v14l-3-2-3 2-3-2-3 2V6a2 2 0 012-2z" />
+      </svg>
+    ),
+  },
+  {
+    href: '/more',
+    label: 'More',
+    match: ['/more', '/episodes', '/submissions', '/ideas', '/guests', '/social'],
+    icon: (active) => (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16M4 12h16M4 17h16" />
       </svg>
     ),
   },
 ]
 
+function matches(pathname, prefixes) {
+  return prefixes.some(prefix => pathname === prefix || pathname.startsWith(prefix + '/'))
+}
+
 export default function BottomNav() {
   const pathname = usePathname()
-
-  // Don't render for non-drench routes
-  if (!pathname.startsWith('/dashboard') && !pathname.startsWith('/episodes') &&
-      !pathname.startsWith('/leads') && !pathname.startsWith('/submissions') && !pathname.startsWith('/expenses') &&
-      !pathname.startsWith('/analytics')) {
-    return null
-  }
+  const visible = TABS.some(tab => matches(pathname, tab.match))
+  if (!visible) return null
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t-2 border-black safe-area-bottom">
-      <div className="flex items-center justify-around h-16 max-w-lg mx-auto">
-        {TABS.map(tab => {
-          const active = pathname.startsWith(tab.href)
-          if (tab.disabled) {
+    <nav className="fixed bottom-0 inset-x-0 z-30">
+      <div className="max-w-lg mx-auto bg-paper border-t border-line safe-area-bottom">
+        <div className="grid grid-cols-4 h-16">
+          {TABS.map(tab => {
+            const active = matches(pathname, tab.match)
             return (
-              <div key={tab.href} className="flex flex-col items-center gap-0.5 min-w-[60px] py-2 opacity-40 cursor-not-allowed">
-                {tab.icon(false)}
-                <span className="text-[10px] font-bold text-gray-400">{tab.label}</span>
-              </div>
+              <Link
+                key={tab.href}
+                href={tab.href}
+                className={`flex flex-col items-center justify-center gap-0.5 ${active ? 'text-accent' : 'text-muted'}`}
+              >
+                {tab.icon(active)}
+                <span className="text-[10px] font-semibold tracking-wide uppercase">{tab.label}</span>
+              </Link>
             )
-          }
-          return (
-            <Link
-              key={tab.href}
-              href={tab.href}
-              className="flex flex-col items-center gap-0.5 min-w-[60px] py-2"
-            >
-              {tab.icon(active)}
-              <span className={`text-[10px] font-bold ${active ? 'text-dl-red' : 'text-gray-500'}`}>
-                {tab.label}
-              </span>
-            </Link>
-          )
-        })}
+          })}
+        </div>
       </div>
     </nav>
   )
