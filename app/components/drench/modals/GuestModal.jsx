@@ -28,7 +28,7 @@ export default function GuestModal({ user, onClose }) {
   }
 
   return (
-    <ModalShell title="👤 Suggest Guest" onClose={onClose} success={success}>
+    <ModalShell title="Suggest guest" onClose={onClose} success={success}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-bold mb-1">Guest Name *</label>

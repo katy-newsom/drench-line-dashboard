@@ -5,12 +5,28 @@
 @layer base {
   html {
     -webkit-tap-highlight-color: transparent;
+    background: #F4F2ED;
   }
   body {
-    @apply bg-white text-black;
+    background: #F4F2ED;
+    color: #111111;
     font-size: 16px;
+    line-height: 1.45;
     -webkit-font-smoothing: antialiased;
-    font-family: var(--font-archivo), -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: var(--font-archivo-narrow), "Arial Narrow", system-ui, sans-serif;
+  }
+}
+
+@layer components {
+  .eyebrow {
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #827E75;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .field {
+    @apply w-full border border-line-strong rounded-lg bg-card px-3 py-2.5 text-sm text-ink focus:outline-none focus:border-ink;
   }
 }
 

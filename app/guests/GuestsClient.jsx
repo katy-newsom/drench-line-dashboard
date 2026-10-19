@@ -1,14 +1,12 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import dynamic from 'next/dynamic'
+import { useUser } from '@/app/context/UserContext'
+
+const GuestModal = dynamic(() => import('@/app/components/drench/modals/GuestModal'))
 
 const STATUSES = ['Pitched', 'Confirmed', 'Recorded', 'Aired']
 
-const STATUS_COLORS = {
-  Pitched: 'bg-gray-100 text-gray-700',
-  Confirmed: 'bg-yellow-100 text-yellow-800',
-  Recorded: 'bg-blue-100 text-blue-800',
-  Aired: 'bg-green-100 text-green-800',
-}
 
 function GuestRow({ guest, onUpdate }) {
   const [expanded, setExpanded] = useState(false)
@@ -44,7 +42,7 @@ function GuestRow({ guest, onUpdate }) {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${STATUS_COLORS[status] ?? 'bg-gray-100 text-gray-600'}`}>
+          <span className="text-xs font-semibold text-ink-2">
             {status}
           </span>
           <span className="text-gray-400 text-sm">{expanded ? '▲' : '▼'}</span>
@@ -92,9 +90,11 @@ function GuestRow({ guest, onUpdate }) {
 }
 
 export default function GuestsClient() {
+  const { user } = useUser()
   const [guests, setGuests] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [showAdd, setShowAdd] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -118,9 +118,16 @@ export default function GuestsClient() {
   }
 
   return (
-    <main className="pb-20 min-h-screen bg-white">
-      <div className="max-w-lg mx-auto px-4 pt-12">
-        <h1 className="text-2xl font-bold mb-4">Guests 👥</h1>
+    <main className="pb-24 min-h-screen">
+      {showAdd && <GuestModal user={user} onClose={() => { setShowAdd(false); load() }} />}
+      <div className="max-w-lg mx-auto px-4 pt-16">
+        <div className="flex items-end justify-between gap-3 mb-4">
+          <div>
+            <p className="eyebrow mb-2">Booking</p>
+            <h1 className="font-display text-[2rem] uppercase leading-none">Guests</h1>
+          </div>
+          <button onClick={() => setShowAdd(true)} className="bg-ink text-white text-sm font-semibold px-4 py-2 rounded-lg">Add</button>
+        </div>
 
         {loading && <div className="flex items-center justify-center h-48 text-gray-400">Loading...</div>}
 
@@ -133,10 +140,9 @@ export default function GuestsClient() {
         )}
 
         {!loading && !error && guests.length === 0 && (
-          <div className="border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center">
-            <div className="text-2xl mb-2">🎤</div>
-            <div className="font-bold text-gray-700 mb-1">No guests yet</div>
-            <div className="text-xs text-gray-400">Tap + to suggest someone worth booking</div>
+          <div className="border border-dashed border-line-strong rounded-xl p-8 text-center">
+            <div className="font-semibold text-ink mb-1">No guests yet</div>
+            <div className="text-xs text-muted">Tap Add to suggest someone.</div>
           </div>
         )}
 

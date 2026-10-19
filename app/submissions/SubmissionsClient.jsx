@@ -81,7 +81,7 @@ function AddDrawer({ onClose, onSaved }) {
     <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/40">
       <div className="bg-white rounded-t-3xl px-5 pt-5 pb-8 max-w-lg mx-auto w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold">Add a Question 📬</h2>
+          <h2 className="font-display text-2xl uppercase leading-none">Add a question</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-black text-xl leading-none">✕</button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -450,15 +450,15 @@ export default function SubmissionsClient() {
     <>
       {showAdd && <AddDrawer onClose={() => setShowAdd(false)} onSaved={handleSaved} />}
 
-      <main className="pb-20 min-h-screen bg-white">
-        <div className="max-w-lg mx-auto px-4 pt-12">
+      <main className="pb-24 min-h-screen">
+        <div className="max-w-lg mx-auto px-4 pt-16">
 
-          {/* Header */}
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-end justify-between mb-2 gap-3">
             <div>
-              <h1 className="text-2xl font-bold">Q&amp;A Inbox 📬</h1>
+              <p className="eyebrow mb-2">Inbox</p>
+              <h1 className="font-display text-[2rem] uppercase leading-none">Listener questions</h1>
               {newCount > 0 && (
-                <p className="text-sm text-dl-red font-bold mt-0.5">{newCount} new question{newCount !== 1 ? 's' : ''} waiting!</p>
+                <p className="text-sm text-ink-2 mt-2">{newCount} new</p>
               )}
             </div>
             <div className="flex gap-2">
@@ -469,7 +469,7 @@ export default function SubmissionsClient() {
               </button>
               <button onClick={() => setShowAdd(true)}
                 className="bg-black text-white text-xs font-bold px-4 py-2 rounded-full active:scale-95 transition-transform">
-                + Add a Question
+                Add
               </button>
             </div>
           </div>
@@ -530,8 +530,7 @@ export default function SubmissionsClient() {
 
               {!loadingNotion && !error && filtered.length === 0 && (
                 <div className="border-2 border-dashed border-gray-200 rounded-2xl p-10 text-center">
-                  <div className="text-3xl mb-2">📋</div>
-                  <p className="font-bold text-gray-700 mb-1">
+                  <p className="font-semibold text-ink mb-1">
                     {activeFilter === 'All' ? 'Nothing logged yet' : `No "${activeFilter}" questions`}
                   </p>
                   <p className="text-xs text-gray-400">
@@ -575,8 +574,7 @@ export default function SubmissionsClient() {
 
               {!loadingSheets && sheetItems?.length === 0 && (
                 <div className="border-2 border-dashed border-gray-200 rounded-2xl p-10 text-center">
-                  <div className="text-3xl mb-2">📭</div>
-                  <p className="font-bold text-gray-700 mb-1">No submissions yet</p>
+                  <p className="font-semibold text-ink mb-1">No submissions yet</p>
                   <p className="text-xs text-gray-400">Questions submitted on drenchline.com will appear here automatically</p>
                 </div>
               )}

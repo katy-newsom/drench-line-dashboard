@@ -15,30 +15,10 @@ const TIER_DETAILS = {
   Custom:    { price: 'Custom',    color: 'bg-orange-100 text-orange-800', min: 'Flexible' },
 }
 
-const STATUS_COLORS = {
-  'Interested (Unconfirmed)': 'bg-blue-50 text-blue-500',
-  Lead:          'bg-gray-100 text-gray-600',
-  Contacted:     'bg-yellow-100 text-yellow-800',
-  'In Talks':    'bg-orange-100 text-orange-800',
-  'Closed Won':  'bg-green-100 text-green-800',
-  'Closed Lost': 'bg-red-50 text-red-400',
-}
-
-const STATUS_EMOJI = {
-  'Interested (Unconfirmed)': '👋',
-  Lead: '👀', Contacted: '📨', 'In Talks': '🤝', 'Closed Won': '✅', 'Closed Lost': '❌',
-}
-
-const INVOICE_COLORS = {
-  'Not Invoiced': 'bg-gray-100 text-gray-500',
-  'Invoiced':     'bg-yellow-100 text-yellow-800',
-  'Paid':         'bg-green-100 text-green-800',
-}
-
 const VOTES = [
-  { label: '✅ Back it',  value: '✅ Back it'  },
-  { label: '🚫 Pass',     value: '🚫 Pass'     },
-  { label: '🤔 Maybe',   value: '🤔 Maybe'    },
+  { label: 'Back it', value: '✅ Back it' },
+  { label: 'Pass', value: '🚫 Pass' },
+  { label: 'Maybe', value: '🤔 Maybe' },
 ]
 
 function formatDate(str) {
@@ -73,7 +53,7 @@ function DealTypePicker({ value, onChange, dark }) {
             className={`text-xs font-bold py-2 rounded-lg border-2 transition-colors ${
               value === t ? 'border-black bg-black text-white' : `${dark ? 'border-black' : 'border-gray-200'} bg-white text-gray-700`
             }`}>
-            {t === 'Recurring' ? '🔁 Monthly' : t === 'One-Time' ? '🎙️ One-Time' : '🤝 In-Kind'}
+            {t === 'Recurring' ? 'Monthly' : t === 'One-Time' ? 'One-time' : 'In-kind'}
           </button>
         ))}
       </div>
@@ -151,7 +131,7 @@ function TeamDiscussion({ pageId, author }) {
 
   return (
     <div className="mt-4 pt-4 border-t border-gray-100">
-      <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Team Vote 🗳️</p>
+      <p className="eyebrow mb-3">Team vote</p>
 
       {/* Vote buttons */}
       <div className="flex gap-2 mb-3">
@@ -185,7 +165,7 @@ function TeamDiscussion({ pageId, author }) {
       )}
 
       {/* Comment thread */}
-      <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Notes & Context 💬</p>
+      <p className="eyebrow mb-2">Notes</p>
       {comments === null ? (
         <p className="text-xs text-gray-400 mb-2">Loading…</p>
       ) : comments.length === 0 ? (
@@ -220,12 +200,11 @@ function PackagesCard({ packages }) {
   if (!packages || packages.length === 0) return null
 
   return (
-    <div className="bg-black text-white rounded-2xl p-4 mb-5">
-      <button onClick={() => setSectionOpen(v => !v)} className="w-full flex items-center justify-between gap-2">
-        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-          Your Packages · What's Included 📋
-        </p>
-        <svg className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${sectionOpen ? 'rotate-180' : ''}`}
+    <div className="mt-8 border-t border-line pt-4">
+      <button onClick={() => setSectionOpen(v => !v)} className="w-full flex items-center justify-between gap-2 text-left">
+        <span className="text-sm font-semibold">Packages</span>
+        <span className="text-xs text-muted ml-2">{packages.length}</span>
+        <svg className={`w-4 h-4 text-muted ml-auto flex-shrink-0 transition-transform ${sectionOpen ? 'rotate-180' : ''}`}
           fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
@@ -235,21 +214,21 @@ function PackagesCard({ packages }) {
         {packages.map(pkg => {
           const open = expanded === pkg.id
           return (
-            <div key={pkg.id} className="bg-white/5 rounded-xl overflow-hidden">
+            <div key={pkg.id} className="bg-card border border-line rounded-xl overflow-hidden">
               <button onClick={() => setExpanded(open ? null : pkg.id)}
                 className="w-full text-left px-3 py-2.5 flex items-center justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="font-bold text-sm">{pkg.name}</p>
-                  {pkg.price && <p className="text-xs text-gray-400 mt-0.5">{pkg.price}</p>}
+                  <p className="font-semibold text-sm">{pkg.name}</p>
+                  {pkg.price && <p className="text-xs text-muted mt-0.5">{pkg.price}</p>}
                 </div>
-                <svg className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
+                <svg className={`w-4 h-4 text-muted flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
                   fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
               {open && pkg.deliverables && (
                 <div className="px-3 pb-3 pt-1">
-                  <p className="text-xs text-gray-300 leading-relaxed whitespace-pre-wrap">{pkg.deliverables}</p>
+                  <p className="text-xs text-ink-2 leading-relaxed whitespace-pre-wrap">{pkg.deliverables}</p>
                 </div>
               )}
             </div>
@@ -308,7 +287,7 @@ function AddDrawer({ onClose, onSaved, defaultUser, existingNames, packages }) {
     <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/40">
       <div className="bg-white rounded-t-3xl px-5 pt-5 pb-8 max-w-lg mx-auto w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold">Add Sponsor / Lead 💰</h2>
+          <h2 className="font-display text-2xl uppercase leading-none">Add sponsor</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-black text-xl">✕</button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -319,7 +298,7 @@ function AddDrawer({ onClose, onSaved, defaultUser, existingNames, packages }) {
               className={`w-full border-2 rounded-xl px-3 py-2.5 text-sm focus:outline-none ${duplicate ? 'border-yellow-400 bg-yellow-50' : 'border-gray-200 focus:border-dl-red'}`} />
             {duplicate && (
               <p className="text-xs text-yellow-700 font-medium mt-1">
-                ⚠️ Heads up — a similar company is already in your pipeline. Check before adding!
+                A similar company is already in the pipeline. Check before adding.
               </p>
             )}
           </div>
@@ -553,7 +532,7 @@ function EditSheet({ sponsor, packages, onClose, onSave, author }) {
           )}
 
           <div className="pt-2 border-t border-gray-100">
-            <label className="block text-sm font-bold mb-1">Invoice Status 🧾</label>
+            <label className="block text-sm font-bold mb-1">Invoice status</label>
             <select value={invoiceStatus} onChange={e => setInvoiceStatus(e.target.value)}
               className="w-full border-2 border-black rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-dl-red bg-white">
               {INVOICE_STATUSES.map(s => <option key={s}>{s}</option>)}
@@ -576,7 +555,7 @@ function EditSheet({ sponsor, packages, onClose, onSave, author }) {
 
           <label className="flex items-center gap-2 text-sm font-bold cursor-pointer">
             <input type="checkbox" checked={exclusiveCategory} onChange={e => setExclusiveCategory(e.target.checked)} />
-            Wants category exclusivity 🔒
+            Wants category exclusivity
           </label>
 
           <div>
@@ -605,113 +584,68 @@ function EditSheet({ sponsor, packages, onClose, onSave, author }) {
 }
 
 // ── Sponsor card ──────────────────────────────────────────────────
-function SponsorCard({ sponsor, packagesById, onTap }) {
-  const tierInfo = TIER_DETAILS[sponsor.tier]
+function SponsorCard({ sponsor, packagesById, onTap, showStatus }) {
   const effectiveStatus = statusOf(sponsor)
   const dealType = dealTypeOf(sponsor)
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' })
   const notStarted = dealType !== 'One-Time' && sponsor.dealStart && sponsor.dealStart > today
-  const statusStyle = STATUS_COLORS[effectiveStatus] ?? 'bg-gray-100 text-gray-600'
   const isActive = effectiveStatus === 'Closed Won'
   const isLost = effectiveStatus === 'Closed Lost'
   const linkedPackages = (sponsor.packageIds ?? []).map(id => packagesById?.[id]?.name).filter(Boolean)
+  const unpaid = isActive && dealType !== 'In-Kind' && (sponsor.invoiceStatus ?? 'Not Invoiced') !== 'Paid'
+
+  const meta = [
+    dealType === 'Recurring' ? 'Monthly' : dealType === 'One-Time' ? 'One-time' : 'In-kind',
+    sponsor.tier,
+    ...linkedPackages,
+  ].filter(Boolean)
 
   return (
     <button onClick={() => onTap(sponsor)}
-      className={`w-full text-left rounded-2xl p-4 border-2 flex items-center gap-3 active:scale-[0.98] transition-transform group ${
-        isActive ? 'border-green-300 bg-green-50' : isLost ? 'border-gray-100 opacity-50' : 'border-gray-100 bg-white hover:border-black'
-      }`}>
+      className={`w-full text-left rounded-xl p-4 border border-line bg-card flex items-center gap-3 ${isLost ? 'opacity-60' : ''}`}>
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-bold text-sm leading-snug">{sponsor.companyName}</span>
-          {isActive && <span className="text-xs font-bold text-green-700 bg-green-100 px-1.5 py-0.5 rounded-full">ACTIVE</span>}
-          {sponsor.exclusiveCategory && <span className="text-xs" title="Wants category exclusivity">🔒</span>}
-        </div>
-        <div className="flex gap-1.5 mt-1.5 flex-wrap items-center">
-          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusStyle}`}>
-            {STATUS_EMOJI[effectiveStatus]} {effectiveStatus}
-          </span>
-          {sponsor.tier && (
-            <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${tierInfo?.color ?? 'bg-gray-100 text-gray-600'}`}>
-              {sponsor.tier}
-            </span>
-          )}
-          {linkedPackages.map(name => (
-            <span key={name} className="text-xs px-2 py-0.5 rounded-full font-bold bg-indigo-100 text-indigo-700">
-              {name}
-            </span>
-          ))}
+        <p className="font-display text-base uppercase leading-tight">{sponsor.companyName}</p>
+        <p className="text-sm text-ink-2 mt-1">{meta.join(' · ')}</p>
+        {showStatus && (
+          <p className="text-xs font-semibold text-muted mt-1">{effectiveStatus}</p>
+        )}
+        <div className="flex gap-3 mt-1 flex-wrap text-xs text-muted">
           {dealType === 'Recurring' && sponsor.monthlyValue != null && (
-            <span className="text-xs text-gray-500 font-medium">{formatCurrency(sponsor.monthlyValue)}/mo</span>
+            <span>{formatCurrency(sponsor.monthlyValue)}/mo</span>
           )}
           {dealType === 'One-Time' && (
             sponsor.oneTimeFee != null
-              ? <span className="text-xs text-gray-500 font-medium">{formatCurrency(sponsor.oneTimeFee)} one-time</span>
-              : isActive && <span className="text-xs font-bold text-yellow-700">$ amount needed</span>
+              ? <span>{formatCurrency(sponsor.oneTimeFee)}</span>
+              : isActive && <span className="text-accent font-semibold">Amount needed</span>
           )}
-          {isActive && dealType !== 'In-Kind' && (
-            <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${INVOICE_COLORS[sponsor.invoiceStatus] ?? INVOICE_COLORS['Not Invoiced']}`}>
-              🧾 {sponsor.invoiceStatus ?? 'Not Invoiced'}
-            </span>
-          )}
-        </div>
-        <div className="flex gap-3 mt-1 flex-wrap">
-          {sponsor.contactName && <p className="text-xs text-gray-400">👤 {sponsor.contactName}</p>}
-          {sponsor.flaggedBy && <p className="text-xs text-gray-400">· via {sponsor.flaggedBy}</p>}
+          {sponsor.contactName && <span>{sponsor.contactName}</span>}
         </div>
         {dealType === 'One-Time' && sponsor.episodeDate && (
-          <p className="text-xs text-green-600 font-medium mt-0.5">🎙️ Episode {formatDate(sponsor.episodeDate)}</p>
+          <p className="text-xs text-ink-2 mt-1">Episode {formatDate(sponsor.episodeDate)}</p>
         )}
-        {isActive && notStarted && <p className="text-xs text-green-600 font-medium mt-0.5">Starts {formatDate(sponsor.dealStart)}</p>}
+        {isActive && notStarted && <p className="text-xs text-ink-2 mt-1">Starts {formatDate(sponsor.dealStart)}</p>}
         {isActive && dealType !== 'One-Time' && !notStarted && sponsor.dealEnd && (
-          <p className="text-xs text-green-600 font-medium mt-0.5">Deal ends {formatDate(sponsor.dealEnd)}</p>
+          <p className="text-xs text-ink-2 mt-1">Through {formatDate(sponsor.dealEnd)}</p>
         )}
-      </div>
-      <div className="flex flex-col items-end gap-1 flex-shrink-0">
-        <div className="flex items-center gap-1 text-gray-300 group-hover:text-gray-600 transition-colors">
-          <span className="text-xs font-bold">View</span>
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </div>
+        {unpaid && (
+          <p className="text-xs font-semibold text-accent mt-1.5">{sponsor.invoiceStatus ?? 'Not Invoiced'}</p>
+        )}
+        {sponsor.exclusiveCategory && (
+          <p className="text-xs text-muted mt-1">Category exclusive</p>
+        )}
       </div>
     </button>
   )
 }
 
-// ── Status section (funnel) ────────────────────────────────────────
-function StatusSection({ status, sponsors, packagesById, onTap, defaultCollapsed }) {
-  const [collapsed, setCollapsed] = useState(defaultCollapsed ?? status === 'Closed Lost')
-  if (sponsors.length === 0) return null
-  return (
-    <div className="mb-5">
-      <button onClick={() => setCollapsed(v => !v)} className="flex items-center gap-2 mb-3 w-full text-left">
-        <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${STATUS_COLORS[status]}`}>
-          {STATUS_EMOJI[status]} {status}
-        </span>
-        <span className="text-xs text-gray-400 font-medium">{sponsors.length}</span>
-        <svg className={`w-3.5 h-3.5 text-gray-400 ml-auto transition-transform ${collapsed ? '' : 'rotate-180'}`}
-          fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-      {!collapsed && (
-        <div className="space-y-2">
-          {sponsors.map(s => <SponsorCard key={s.id} sponsor={s} packagesById={packagesById} onTap={onTap} />)}
-        </div>
-      )}
-    </div>
-  )
-}
-
 // ── Collapsible group (Interest List / Archived) ───────────────────
-function CollapsibleGroup({ title, emoji, sponsors, onTap, hint, onQuickAction, quickActionLabel }) {
+function CollapsibleGroup({ title, sponsors, onTap, hint, onQuickAction, quickActionLabel }) {
   const [open, setOpen] = useState(false)
   if (sponsors.length === 0) return null
   return (
-    <div className="mb-6 border-t-2 border-dashed border-gray-100 pt-4">
+    <div className="mt-6 border-t border-line pt-4">
       <button onClick={() => setOpen(v => !v)} className="flex items-center gap-2 mb-1 w-full text-left">
-        <span className="font-bold text-sm">{emoji} {title}</span>
+        <span className="font-semibold text-sm">{title}</span>
         <span className="text-xs text-gray-400 font-medium">{sponsors.length}</span>
         <svg className={`w-3.5 h-3.5 text-gray-400 ml-auto transition-transform ${open ? 'rotate-180' : ''}`}
           fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -750,6 +684,7 @@ export default function LeadsClient() {
   const [error, setError] = useState(null)
   const [showAdd, setShowAdd] = useState(false)
   const [selected, setSelected] = useState(null)
+  const [listView, setListView] = useState('active')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -796,17 +731,18 @@ export default function LeadsClient() {
   const interested = (sponsors ?? []).filter(s => !s.archived && s.status === 'Interested (Unconfirmed)')
   const archived = (sponsors ?? []).filter(s => s.archived)
 
-  const packageSponsors = live.filter(s => dealTypeOf(s) !== 'One-Time')
-  const featuredSponsors = live.filter(s => dealTypeOf(s) === 'One-Time')
+  function sortSponsors(list) {
+    const rank = { Recurring: 0, 'One-Time': 1, 'In-Kind': 2 }
+    return [...list].sort((a, b) => {
+      const byType = (rank[dealTypeOf(a)] ?? 9) - (rank[dealTypeOf(b)] ?? 9)
+      if (byType) return byType
+      return (a.companyName || '').localeCompare(b.companyName || '')
+    })
+  }
 
-  const byStatus = PIPELINE_STATUSES.reduce((acc, s) => {
-    acc[s] = packageSponsors.filter(sp => statusOf(sp) === s)
-    return acc
-  }, {})
-  const featuredByStatus = PIPELINE_STATUSES.reduce((acc, s) => {
-    acc[s] = featuredSponsors.filter(sp => statusOf(sp) === s)
-    return acc
-  }, {})
+  const activeSponsors = sortSponsors(live.filter(s => statusOf(s) === 'Closed Won'))
+  const talkingSponsors = sortSponsors(live.filter(s => statusOf(s) !== 'Closed Won'))
+  const shownSponsors = listView === 'active' ? activeSponsors : talkingSponsors
 
   const summary = summarizeSponsors(sponsors ?? [])
   const existingNames = (sponsors ?? []).map(s => s.companyName)
@@ -816,38 +752,37 @@ export default function LeadsClient() {
       {showAdd && <AddDrawer onClose={() => setShowAdd(false)} onSaved={handleSaved} defaultUser={user} existingNames={existingNames} packages={packages} />}
       {selected && <EditSheet sponsor={selected} packages={packages} onClose={() => setSelected(null)} onSave={handleSave} author={user} />}
 
-      <main className="pb-20 min-h-screen bg-white">
-        <div className="max-w-lg mx-auto px-4 pt-12">
+      <main className="pb-24 min-h-screen">
+        <div className="max-w-lg mx-auto px-4 pt-16">
 
-          {/* Header */}
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-end justify-between mb-5 gap-3">
             <div>
-              <h1 className="text-2xl font-bold">Sponsors 💰</h1>
-              {sponsors && (
-                <p className="text-sm text-gray-500 mt-0.5">
-                  {summary.activeCount > 0
-                    ? `${formatCurrency(summary.recurringMonthly)}/mo recurring · ${formatCurrency(summary.oneTimeTotal)} one-time in ${summary.year} · ${summary.pipeline} in pipeline`
-                    : summary.pipeline > 0 ? `${summary.pipeline} in pipeline — keep pushing!` : 'Start building your pipeline 👇'}
-                  {summary.invoicesPending > 0 && (
-                    <span className="text-dl-red font-bold"> · {summary.invoicesPending} invoice{summary.invoicesPending > 1 ? 's' : ''} pending</span>
-                  )}
-                </p>
-              )}
+              <p className="eyebrow mb-2">Pipeline</p>
+              <h1 className="font-display text-[2rem] uppercase leading-none">Sponsors</h1>
             </div>
-            <div className="flex gap-2">
-              <button onClick={load} disabled={loading}
-                className="bg-gray-100 text-gray-700 text-xs font-bold px-3 py-2 rounded-full active:scale-95 transition-transform disabled:opacity-50">
-                {loading ? '…' : '↻'}
-              </button>
-              <button onClick={() => setShowAdd(true)}
-                className="bg-black text-white text-xs font-bold px-4 py-2 rounded-full active:scale-95 transition-transform">
-                + Add
-              </button>
-            </div>
+            <button onClick={() => setShowAdd(true)}
+              className="bg-ink text-white text-sm font-semibold px-4 py-2 rounded-lg">
+              Add
+            </button>
           </div>
 
-          {/* Packages reference card */}
-          <PackagesCard packages={packages} />
+          {sponsors && (
+            <div className="grid grid-cols-2 gap-2.5 mb-4">
+              <div className="bg-card border border-line rounded-xl p-3">
+                <p className="eyebrow">Monthly</p>
+                <p className="font-display text-2xl mt-1">{formatCurrency(summary.recurringMonthly)}</p>
+              </div>
+              <div className="bg-card border border-line rounded-xl p-3">
+                <p className="eyebrow">One-time · {summary.year}</p>
+                <p className="font-display text-2xl mt-1">{formatCurrency(summary.oneTimeTotal)}</p>
+              </div>
+            </div>
+          )}
+          {summary.invoicesPending > 0 && (
+            <p className="text-sm font-semibold text-accent mb-4">
+              {summary.invoicesPending} invoice{summary.invoicesPending > 1 ? 's' : ''} not paid
+            </p>
+          )}
 
           {loading && (
             <div className="space-y-2">
@@ -863,35 +798,42 @@ export default function LeadsClient() {
           )}
 
           {!loading && !error && sponsors?.length === 0 && (
-            <div className="border-2 border-dashed border-gray-200 rounded-2xl p-10 text-center">
-              <div className="text-3xl mb-2">💰</div>
-              <p className="font-bold text-gray-700 mb-1">No sponsors yet</p>
-              <p className="text-xs text-gray-400">Tap "+ Add" to log your first lead</p>
+            <div className="border border-dashed border-line-strong rounded-xl p-10 text-center">
+              <p className="font-semibold text-ink mb-1">No sponsors yet</p>
+              <p className="text-xs text-muted">Tap Add to log the first one.</p>
             </div>
           )}
 
           {!loading && !error && sponsors && sponsors.length > 0 && (
             <div>
-              <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wide mb-3">🔁 Monthly Partners</h2>
-              {PIPELINE_STATUSES.map(status => (
-                <StatusSection key={status} status={status} sponsors={byStatus[status]} packagesById={packagesById} onTap={setSelected} />
-              ))}
+              <div className="flex gap-2 mb-4">
+                <button onClick={() => setListView('active')}
+                  className={`text-sm font-semibold px-3 py-2 rounded-lg border ${listView === 'active' ? 'bg-ink text-white border-ink' : 'bg-card text-ink-2 border-line-strong'}`}>
+                  Active · {activeSponsors.length}
+                </button>
+                <button onClick={() => setListView('talks')}
+                  className={`text-sm font-semibold px-3 py-2 rounded-lg border ${listView === 'talks' ? 'bg-ink text-white border-ink' : 'bg-card text-ink-2 border-line-strong'}`}>
+                  In talks · {talkingSponsors.length}
+                </button>
+              </div>
 
-              {featuredSponsors.length > 0 && (
-                <>
-                  <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wide mb-3 mt-2">🎙️ One-Time Episodes</h2>
-                  {PIPELINE_STATUSES.map(status => (
-                    <StatusSection key={status} status={status} sponsors={featuredByStatus[status]} packagesById={packagesById} onTap={setSelected} defaultCollapsed={false} />
+              {shownSponsors.length === 0 ? (
+                <p className="text-sm text-muted mb-6">Nothing in this list.</p>
+              ) : (
+                <div className="space-y-2">
+                  {shownSponsors.map(s => (
+                    <SponsorCard key={s.id} sponsor={s} packagesById={packagesById} onTap={setSelected} showStatus={listView === 'talks'} />
                   ))}
-                </>
+                </div>
               )}
 
+              <PackagesCard packages={packages} />
               <CollapsibleGroup
-                title="Interest List" emoji="👋" sponsors={interested} onTap={setSelected}
-                hint="They've reached out but haven't replied yet — move them into the real pipeline once they do."
-                onQuickAction={moveToPipeline} quickActionLabel="→ Pipeline"
+                title="Interest list" sponsors={interested} onTap={setSelected}
+                hint="They've reached out but haven't replied yet. Move them into the pipeline once they do."
+                onQuickAction={moveToPipeline} quickActionLabel="To pipeline"
               />
-              <CollapsibleGroup title="Archived" emoji="🗄️" sponsors={archived} onTap={setSelected} />
+              <CollapsibleGroup title="Archived" sponsors={archived} onTap={setSelected} />
             </div>
           )}
 

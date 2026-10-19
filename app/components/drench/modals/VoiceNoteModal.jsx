@@ -26,7 +26,7 @@ export default function VoiceNoteModal({ user, onClose }) {
   }
 
   return (
-    <ModalShell title="🎤 Voice Note" onClose={onClose} success={success}>
+    <ModalShell title="Voice note" onClose={onClose} success={success}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="flex flex-col items-center gap-4 py-4">
           <VoiceMemo onTranscript={setTranscript} />
