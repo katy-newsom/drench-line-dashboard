@@ -24,6 +24,17 @@ const TABS = [
     ),
   },
   {
+    href: '/shoot',
+    label: 'Shoot',
+    match: ['/shoot'],
+    icon: (active) => (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 8.5h3.2l1.2-2h7.2l1.2 2H20a1 1 0 011 1V18a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5a1 1 0 011-1z" />
+        <circle cx="12" cy="13.5" r="3" />
+      </svg>
+    ),
+  },
+  {
     href: '/expenses',
     label: 'Expenses',
     match: ['/expenses'],
@@ -57,7 +68,7 @@ export default function BottomNav() {
   return (
     <nav className="fixed bottom-0 inset-x-0 z-30">
       <div className="max-w-lg mx-auto bg-paper border-t border-line safe-area-bottom">
-        <div className="grid grid-cols-4 h-16">
+        <div className="grid grid-cols-5 h-16">
           {TABS.map(tab => {
             const active = matches(pathname, tab.match)
             return (

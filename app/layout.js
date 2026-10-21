@@ -21,7 +21,7 @@ const archivoNarrow = Archivo_Narrow({
 
 export const metadata = {
   title: 'Drench Line',
-  description: 'Sponsors, downloads, and expenses for the Drench Line podcast',
+  description: 'Sponsors, downloads, shoot list, and expenses for the Drench Line podcast',
 }
 
 export const viewport = {
