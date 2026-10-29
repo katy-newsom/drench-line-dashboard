@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "node --experimental-default-type=module --test lib/shoots.test.js"
+    "test": "node --experimental-default-type=module --test lib/shoots.test.js lib/social.test.js"
   },
   "dependencies": {
     "@notionhq/client": "^2.2.14",
