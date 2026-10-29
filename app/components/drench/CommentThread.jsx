@@ -1,10 +1,10 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 // Shared team comment thread backed by native Notion page comments.
 // Used on Social, Episodes, and Ideas. Leads has its own TeamDiscussion
 // (voting + comments) and Submissions has an always-open variant.
-export default function CommentThread({ pageId, author }) {
+export default function CommentThread({ pageId, author, refreshKey = 0 }) {
   const [open, setOpen] = useState(false)
   const [comments, setComments] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -28,6 +28,26 @@ export default function CommentThread({ pageId, author }) {
     if (!open && comments === null) load()
     setOpen(v => !v)
   }
+
+  useEffect(() => {
+    if (!refreshKey) return
+    let cancelled = false
+    setLoading(true)
+    fetch(`/api/notion/social-comment?pageId=${pageId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (!cancelled) setComments(data.comments ?? [])
+      })
+      .catch(() => {
+        if (!cancelled) setComments([])
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [refreshKey, pageId])
 
   async function handleSend() {
     if (!text.trim()) return

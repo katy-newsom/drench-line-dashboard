@@ -11,7 +11,7 @@ const LINKS = [
   { href: '/submissions', label: 'Listener questions', detail: 'Logged questions and the website inbox' },
   { href: '/ideas', label: 'Ideas', detail: 'Topics to try' },
   { href: '/guests', label: 'Guests', detail: 'People to book' },
-  { href: '/social', label: 'Social calendar', detail: 'Posts from the content calendar' },
+  { href: '/social', label: 'Social calendar', detail: 'Review drafts before they post' },
 ]
 
 export default function MorePage() {
